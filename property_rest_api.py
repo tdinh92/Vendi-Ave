@@ -407,6 +407,7 @@ def api_documentation():
             'POST /property/basic': 'Basic profile report only',
             'POST /property/allevents': 'All events snapshot (sales, assessments, permits, market events)',
             'POST /property/assessmenthistory': 'Historical property assessments and tax data',
+            'POST /property/comprehensive': 'Ultimate analysis (Basic + AVM + Timeline + Auto-Charts)',
             'POST /property/raw/avm': 'Raw AVM data from Attom',
             'POST /property/raw/basic': 'Raw basic profile data from Attom',
             'POST /property/raw/allevents': 'Raw all events data from Attom',
@@ -431,6 +432,36 @@ def assessment_charts():
     GET /charts
     """
     return render_template('assessment_charts.html')
+
+@app.route('/property/comprehensive', methods=['POST'])
+def get_comprehensive_analysis():
+    """
+    Get comprehensive property analysis (Basic + AVM + Timeline + Auto-Charts)
+    
+    POST /property/comprehensive
+    Body: {"address": "123 Main St, Boston, MA 02101"}
+    """
+    try:
+        data = request.get_json()
+        
+        if not data or 'address' not in data:
+            return jsonify({
+                'error': 'Address is required',
+                'example': {'address': '123 Main St, Boston, MA 02101'}
+            }), 400
+        
+        address = data['address'].strip()
+        if not address:
+            return jsonify({'error': 'Address cannot be empty'}), 400
+        
+        result = property_service.get_comprehensive_analysis(address)
+        return jsonify(result)
+        
+    except Exception as e:
+        return jsonify({
+            'error': 'Internal server error',
+            'details': str(e)
+        }), 500
 
 @app.route('/static/<path:filename>')
 def serve_static(filename):

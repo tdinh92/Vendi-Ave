@@ -504,8 +504,19 @@
             document.getElementById('property-info').style.display = 'none';
         }
 
-        // Load default charts on page load
+        // Load charts on page load - check for URL parameter first
         window.addEventListener('load', function() {
+            // Check if address is passed in URL parameter
+            const urlParams = new URLSearchParams(window.location.search);
+            const addressParam = urlParams.get('address');
+            
+            if (addressParam) {
+                // Update input field with address from URL
+                document.getElementById('addressInput').value = addressParam;
+                console.log('Loading charts for address from URL:', addressParam);
+            }
+            
+            // Load charts (either default or from URL parameter)
             loadCharts();
         });
     </script>

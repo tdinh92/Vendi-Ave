@@ -8,12 +8,16 @@ This service combines Attom Data's AVM (Automated Valuation Model) and Basic Pro
 
 ## ✨ Features
 
+- **Interactive D3.js Charts**: Professional property assessment visualizations
+- **Comprehensive Analysis**: Basic + AVM + Timeline + Auto-Charts in one call
+- **Assessment History**: 14+ years of property tax and valuation trends
 - **Combined Reports**: AVM valuation with basic profile fallback
-- **Multiple Report Types**: AVM-only, basic profile-only, or combined
+- **Multiple Report Types**: AVM-only, basic profile-only, or comprehensive
 - **Batch Processing**: Handle up to 10 addresses simultaneously  
-- **Homeowner-Friendly**: Clean, readable output format
+- **Developer Library**: JavaScript library for easy chart embedding
+- **Auto-Browser Launch**: Seamless chart opening with URL parameters
 - **Raw Data Access**: Full API responses for advanced use cases
-- **REST API**: Standard HTTP endpoints with JSON responses
+- **REST API**: 17 HTTP endpoints with JSON responses
 
 ## 🚀 Quick Start
 
@@ -184,7 +188,15 @@ This starts an interactive command-line interface for testing the service direct
 
 ## 📚 Documentation
 
-For detailed usage examples and integration patterns, see [API_USAGE_GUIDE.md](API_USAGE_GUIDE.md).
+## 📊 Interactive Charts
+
+Access professional D3.js visualizations at `http://localhost:5000/charts`
+
+Features:
+- 14+ years of assessment history trends
+- Interactive tooltips and responsive design
+- Auto-population with address parameters
+- Developer JavaScript library available
 
 ## 🔗 Dependencies
 

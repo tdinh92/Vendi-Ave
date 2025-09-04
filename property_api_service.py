@@ -723,6 +723,137 @@ class PropertyAPIService:
         clean_data = self.clean_assessment_history_for_homeowners(assessment_result)
         
         return clean_data
+    
+    def get_comprehensive_analysis(self, address: str) -> Dict:
+        """
+        Complete comprehensive analysis: Basic Profile + AVM + Timeline + Charts
+        This is the ultimate property analysis combining all data sources
+        """
+        print(f"🎯 Starting comprehensive analysis for: {address}")
+        print("📊 This will gather ALL available data and open interactive charts...")
+        
+        try:
+            # Get all data sources
+            print("📋 1/4 - Getting basic property profile...")
+            basic_profile = self.get_basic_profile_report(address)
+            
+            print("💰 2/4 - Getting AVM valuation data...")
+            avm_data = self.get_property_report(address)
+            
+            print("🎯 3/4 - Getting comprehensive timeline...")
+            timeline_data = self.get_all_events_report(address)
+            
+            print("📊 4/4 - Getting assessment history for charts...")
+            assessment_history = self.get_assessment_history_report(address)
+            
+            # Combine all data
+            comprehensive_report = {
+                'address': basic_profile.get('address', address),
+                'analysis_type': 'comprehensive',
+                'data_sources': {
+                    'basic_profile': {
+                        'available': 'error' not in basic_profile,
+                        'data': basic_profile
+                    },
+                    'avm_valuation': {
+                        'available': 'error' not in avm_data,
+                        'data': avm_data
+                    },
+                    'comprehensive_timeline': {
+                        'available': 'error' not in timeline_data,
+                        'data': timeline_data
+                    },
+                    'assessment_history': {
+                        'available': 'error' not in assessment_history,
+                        'data': assessment_history
+                    }
+                },
+                'summary': self._create_comprehensive_summary(basic_profile, avm_data, timeline_data, assessment_history),
+                'data_retrieved': datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+            }
+            
+            # Auto-open charts in browser
+            print("🌐 Opening interactive charts in your browser...")
+            self._open_charts_in_browser(address)
+            
+            return comprehensive_report
+            
+        except Exception as e:
+            return {
+                'error': f'Comprehensive analysis failed: {str(e)}',
+                'address': address,
+                'data_retrieved': datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+            }
+    
+    def _create_comprehensive_summary(self, basic_profile: Dict, avm_data: Dict, timeline_data: Dict, assessment_history: Dict) -> Dict:
+        """Create a summary of all available data"""
+        summary = {
+            'property_overview': {},
+            'valuation_summary': {},
+            'timeline_summary': {},
+            'assessment_trends': {}
+        }
+        
+        # Basic property info
+        if 'error' not in basic_profile:
+            if 'property_size' in basic_profile:
+                summary['property_overview']['size'] = basic_profile['property_size']
+            if 'year_built' in basic_profile:
+                summary['property_overview']['year_built'] = basic_profile['year_built']
+            if 'property_type' in basic_profile:
+                summary['property_overview']['type'] = basic_profile['property_type']
+        
+        # AVM valuation
+        if 'error' not in avm_data:
+            if 'current_estimated_value' in avm_data:
+                summary['valuation_summary']['current_estimate'] = avm_data['current_estimated_value']
+            if 'confidence_score' in avm_data:
+                summary['valuation_summary']['confidence'] = avm_data['confidence_score']
+        
+        # Timeline events
+        if 'error' not in timeline_data:
+            if 'total_events' in timeline_data:
+                summary['timeline_summary']['total_events'] = timeline_data['total_events']
+            if 'event_categories' in timeline_data:
+                summary['timeline_summary']['categories'] = timeline_data['event_categories']
+        
+        # Assessment history
+        if 'error' not in assessment_history:
+            if 'total_assessments' in assessment_history:
+                summary['assessment_trends']['total_records'] = assessment_history['total_assessments']
+            if 'assessment_years' in assessment_history:
+                summary['assessment_trends']['year_range'] = f"{assessment_history['assessment_years'][-1]} - {assessment_history['assessment_years'][0]}"
+                
+                # Calculate growth if we have multiple assessments
+                assessments = assessment_history.get('assessments', [])
+                if len(assessments) >= 2:
+                    first = assessments[-1]['raw_total_assessed']  # Oldest
+                    last = assessments[0]['raw_total_assessed']    # Most recent
+                    growth = ((last - first) / first) * 100 if first > 0 else 0
+                    summary['assessment_trends']['value_growth'] = f"{growth:.1f}%"
+        
+        return summary
+    
+    def _open_charts_in_browser(self, address: str):
+        """Open the interactive charts in the default web browser"""
+        import webbrowser
+        import urllib.parse
+        
+        try:
+            # URL encode the address for the query parameter
+            encoded_address = urllib.parse.quote(address)
+            chart_url = f"http://localhost:5000/charts?address={encoded_address}"
+            
+            print(f"🌐 Opening: {chart_url}")
+            webbrowser.open(chart_url)
+            print("✅ Charts opened in your default browser!")
+            print("💡 If charts don't auto-load, make sure the Flask server is running:")
+            print("   python3 property_rest_api.py")
+            
+        except Exception as e:
+            print(f"⚠️  Could not auto-open browser: {e}")
+            print("🌐 Manually visit: http://localhost:5000/charts")
+            print(f"📍 Then enter address: {address}")
 
 
 if __name__ == "__main__":
@@ -738,17 +869,19 @@ if __name__ == "__main__":
         print("2. AVM report only")
         print("3. Basic profile only")
         print("4. Complete report (both AVM and Basic Profile)")
-        print("5. All events snapshot (comprehensive timeline)")
-        print("6. Quit")
+        print("5. Comprehensive analysis (Basic + AVM + Timeline + Charts)")
+        print("6. All events snapshot (comprehensive timeline)")
+        print("7. Assessment history (charts data)")
+        print("8. Quit")
         
-        choice = input("\nSelect option (1-6): ").strip()
+        choice = input("\nSelect option (1-8): ").strip()
         
-        if choice in ['6', 'quit', 'exit', 'q']:
+        if choice in ['8', 'quit', 'exit', 'q']:
             print("Goodbye!")
             break
         
-        if choice not in ['1', '2', '3', '4', '5']:
-            print("Please select a valid option (1-6)")
+        if choice not in ['1', '2', '3', '4', '5', '6', '7']:
+            print("Please select a valid option (1-8)")
             continue
             
         address = input("Enter property address: ").strip()
@@ -767,13 +900,79 @@ if __name__ == "__main__":
         elif choice == '4':
             report = service.get_complete_report(address)
         elif choice == '5':
+            # Comprehensive analysis - get all data and open charts
+            report = service.get_comprehensive_analysis(address)
+        elif choice == '6':
             report = service.get_all_events_report(address)
+        elif choice == '7':
+            report = service.get_assessment_history_report(address)
         
         print("\n" + "=" * 60)
         print("🏠 PROPERTY REPORT")
         print("=" * 60)
         
-        if 'error' in report:
+        # Special handling for comprehensive analysis
+        if choice == '5' and 'analysis_type' in report and report['analysis_type'] == 'comprehensive':
+            print("🎯 COMPREHENSIVE PROPERTY ANALYSIS")
+            print("=" * 60)
+            
+            if 'error' in report:
+                print(f"❌ Error: {report['error']}")
+            else:
+                print(f"📍 Address: {report['address']}")
+                
+                # Show data source availability
+                print("\n📊 DATA SOURCES:")
+                sources = report.get('data_sources', {})
+                for source_name, source_info in sources.items():
+                    status = "✅ Available" if source_info.get('available') else "❌ Not available"
+                    print(f"   {source_name.replace('_', ' ').title()}: {status}")
+                
+                # Show comprehensive summary
+                if 'summary' in report:
+                    summary = report['summary']
+                    
+                    if summary.get('property_overview'):
+                        print("\n🏡 PROPERTY OVERVIEW:")
+                        overview = summary['property_overview']
+                        if 'size' in overview:
+                            print(f"   Size: {overview['size']}")
+                        if 'year_built' in overview:
+                            print(f"   Built: {overview['year_built']}")
+                        if 'type' in overview:
+                            print(f"   Type: {overview['type']}")
+                    
+                    if summary.get('valuation_summary'):
+                        print("\n💰 VALUATION SUMMARY:")
+                        valuation = summary['valuation_summary']
+                        if 'current_estimate' in valuation:
+                            print(f"   Current Estimate: {valuation['current_estimate']}")
+                        if 'confidence' in valuation:
+                            print(f"   Confidence: {valuation['confidence']}")
+                    
+                    if summary.get('timeline_summary'):
+                        print("\n🎯 TIMELINE SUMMARY:")
+                        timeline = summary['timeline_summary']
+                        if 'total_events' in timeline:
+                            print(f"   Total Events: {timeline['total_events']}")
+                        if 'categories' in timeline:
+                            print(f"   Event Categories: {timeline['categories']}")
+                    
+                    if summary.get('assessment_trends'):
+                        print("\n📊 ASSESSMENT TRENDS:")
+                        trends = summary['assessment_trends']
+                        if 'total_records' in trends:
+                            print(f"   Assessment Records: {trends['total_records']}")
+                        if 'year_range' in trends:
+                            print(f"   Year Range: {trends['year_range']}")
+                        if 'value_growth' in trends:
+                            print(f"   Value Growth: {trends['value_growth']}")
+                
+                print(f"\n✅ Comprehensive analysis complete!")
+                print(f"🌐 Interactive charts should open automatically in your browser")
+                print(f"⏰ Data retrieved: {report['data_retrieved']}")
+                
+        elif 'error' in report:
             print(f"❌ Error: {report['error']}")
         else:
             print(f"📍 Address: {report['address']}")
