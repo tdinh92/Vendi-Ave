@@ -3,7 +3,7 @@ REST API wrapper for Property API Service
 Provides HTTP endpoints for property valuation services
 """
 
-from flask import Flask, jsonify, request
+from flask import Flask, jsonify, request, render_template
 from flask_cors import CORS
 from property_api_service import PropertyAPIService
 import json
@@ -202,6 +202,126 @@ def get_complete_report():
             'details': str(e)
         }), 500
 
+@app.route('/property/allevents', methods=['POST'])
+def get_all_events_report():
+    """
+    Get comprehensive all events snapshot (sales, mortgages, assessments, permits, market events)
+    
+    POST /property/allevents
+    Body: {"address": "123 Main St, Boston, MA 02101"}
+    """
+    try:
+        data = request.get_json()
+        
+        if not data or 'address' not in data:
+            return jsonify({
+                'error': 'Address is required',
+                'example': {'address': '123 Main St, Boston, MA 02101'}
+            }), 400
+        
+        address = data['address'].strip()
+        if not address:
+            return jsonify({'error': 'Address cannot be empty'}), 400
+        
+        result = property_service.get_all_events_report(address)
+        return jsonify(result)
+        
+    except Exception as e:
+        return jsonify({
+            'error': 'Internal server error',
+            'details': str(e)
+        }), 500
+
+@app.route('/property/raw/allevents', methods=['POST'])
+def get_raw_all_events():
+    """
+    Get raw all events snapshot data (unprocessed API response)
+    
+    POST /property/raw/allevents
+    Body: {"address": "123 Main St, Boston, MA 02101"}
+    """
+    try:
+        data = request.get_json()
+        
+        if not data or 'address' not in data:
+            return jsonify({
+                'error': 'Address is required',
+                'example': {'address': '123 Main St, Boston, MA 02101'}
+            }), 400
+        
+        address = data['address'].strip()
+        if not address:
+            return jsonify({'error': 'Address cannot be empty'}), 400
+        
+        result = property_service.get_all_events_snapshot(address)
+        return jsonify(result)
+        
+    except Exception as e:
+        return jsonify({
+            'error': 'Internal server error',
+            'details': str(e)
+        }), 500
+
+@app.route('/property/assessmenthistory', methods=['POST'])
+def get_assessment_history_report():
+    """
+    Get property assessment history with historical tax and value data
+    
+    POST /property/assessmenthistory
+    Body: {"address": "123 Main St, Boston, MA 02101"}
+    """
+    try:
+        data = request.get_json()
+        
+        if not data or 'address' not in data:
+            return jsonify({
+                'error': 'Address is required',
+                'example': {'address': '123 Main St, Boston, MA 02101'}
+            }), 400
+        
+        address = data['address'].strip()
+        if not address:
+            return jsonify({'error': 'Address cannot be empty'}), 400
+        
+        result = property_service.get_assessment_history_report(address)
+        return jsonify(result)
+        
+    except Exception as e:
+        return jsonify({
+            'error': 'Internal server error',
+            'details': str(e)
+        }), 500
+
+@app.route('/property/raw/assessmenthistory', methods=['POST'])
+def get_raw_assessment_history():
+    """
+    Get raw assessment history data (unprocessed API response)
+    
+    POST /property/raw/assessmenthistory
+    Body: {"address": "123 Main St, Boston, MA 02101"}
+    """
+    try:
+        data = request.get_json()
+        
+        if not data or 'address' not in data:
+            return jsonify({
+                'error': 'Address is required',
+                'example': {'address': '123 Main St, Boston, MA 02101'}
+            }), 400
+        
+        address = data['address'].strip()
+        if not address:
+            return jsonify({'error': 'Address cannot be empty'}), 400
+        
+        result = property_service.get_assessment_history(address)
+        return jsonify(result)
+        
+    except Exception as e:
+        return jsonify({
+            'error': 'Internal server error',
+            'details': str(e)
+        }), 500
+
 @app.route('/property/batch', methods=['POST'])
 def get_batch_reports():
     """
@@ -285,9 +405,14 @@ def api_documentation():
             'POST /property/combined': 'Combined report (AVM + Basic Profile fallback)',
             'POST /property/avm': 'AVM report only',
             'POST /property/basic': 'Basic profile report only',
+            'POST /property/allevents': 'All events snapshot (sales, assessments, permits, market events)',
+            'POST /property/assessmenthistory': 'Historical property assessments and tax data',
             'POST /property/raw/avm': 'Raw AVM data from Attom',
             'POST /property/raw/basic': 'Raw basic profile data from Attom',
-            'POST /property/batch': 'Batch processing (up to 10 addresses)'
+            'POST /property/raw/allevents': 'Raw all events data from Attom',
+            'POST /property/raw/assessmenthistory': 'Raw assessment history data from Attom',
+            'POST /property/batch': 'Batch processing (up to 10 addresses)',
+            'GET /charts': 'Interactive D3.js charts for assessment history visualization'
         },
         'request_format': {
             'address': '123 Main St, Boston, MA 02101'
@@ -297,6 +422,22 @@ def api_documentation():
             'report_type': 'combined'
         }
     })
+
+@app.route('/charts', methods=['GET'])
+def assessment_charts():
+    """
+    Interactive D3.js charts for property assessment history visualization
+    
+    GET /charts
+    """
+    return render_template('assessment_charts.html')
+
+@app.route('/static/<path:filename>')
+def serve_static(filename):
+    """Serve static files"""
+    from flask import send_from_directory
+    import os
+    return send_from_directory(os.path.join(os.path.dirname(__file__), 'static'), filename)
 
 if __name__ == '__main__':
     print("🚀 Starting Property Valuation REST API")
