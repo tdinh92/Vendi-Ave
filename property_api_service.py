@@ -10,8 +10,20 @@ from dotenv import load_dotenv
 from typing import Dict, Optional, List, Any
 import json
 from datetime import datetime
+import re
+import logging
+from requests.adapters import HTTPAdapter
+from urllib3.util.retry import Retry
 
 load_dotenv()
+
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(levelname)s - %(message)s',
+    handlers=[logging.StreamHandler()]
+)
+logger = logging.getLogger(__name__)
 
 class PropertyAPIService:
     """
@@ -22,17 +34,87 @@ class PropertyAPIService:
     def __init__(self):
         self.api_key = os.environ.get('ATTOM_API_KEY')
         self.base_url = "https://api.gateway.attomdata.com/propertyapi/v1.0.0"
+        
+        if not self.api_key:
+            raise ValueError("ATTOM_API_KEY not found in environment variables")
+        
+        if len(self.api_key) < 10:  # Basic API key validation
+            raise ValueError("Invalid API key format")
+        
         self.headers = {
             "accept": "application/json",
             "apikey": self.api_key
         }
         
-        if not self.api_key:
-            raise ValueError("ATTOM_API_KEY not found in environment variables")
+        # Setup session with connection pooling and timeouts
+        self.session = requests.Session()
+        
+        # Configure retry strategy
+        retry_strategy = Retry(
+            total=3,
+            backoff_factor=1,
+            status_forcelist=[429, 500, 502, 503, 504],
+        )
+        
+        adapter = HTTPAdapter(max_retries=retry_strategy, pool_connections=10, pool_maxsize=20)
+        self.session.mount("http://", adapter)
+        self.session.mount("https://", adapter)
+        
+        # Set default timeout
+        self.timeout = 10
+    
+    def validate_and_sanitize_address(self, address: str) -> str:
+        """Validate and sanitize address input"""
+        if not address:
+            raise ValueError("Address cannot be empty")
+        
+        # Remove leading/trailing whitespace
+        address = address.strip()
+        
+        if not address:
+            raise ValueError("Address cannot be empty")
+        
+        # Check length limits
+        if len(address) > 200:
+            raise ValueError("Address too long (max 200 characters)")
+        
+        if len(address) < 5:
+            raise ValueError("Address too short (min 5 characters)")
+        
+        # Remove potentially dangerous characters
+        dangerous_chars = ['<', '>', '"', "'", ';', '&', '|', '$', '`']
+        for char in dangerous_chars:
+            if char in address:
+                address = address.replace(char, '')
+        
+        # Check for script injection attempts
+        script_patterns = [
+            r'<script',
+            r'javascript:',
+            r'vbscript:',
+            r'onload=',
+            r'onerror=',
+            r'eval\(',
+            r'alert\(',
+        ]
+        
+        for pattern in script_patterns:
+            if re.search(pattern, address.lower()):
+                raise ValueError("Address contains invalid characters")
+        
+        # Basic US address format validation
+        # Should have at least: street, city, state (optional zip)
+        if not re.match(r'.+,.+', address):
+            raise ValueError("Please use format: Street, City, State [Zip]")
+        
+        return address
     
     def parse_address(self, address: str) -> Dict[str, str]:
-        """Parse address string into components for API calls"""
-        parts = [part.strip() for part in address.split(',')]
+        """Parse and validate address string into components for API calls"""
+        # First validate and sanitize
+        clean_address = self.validate_and_sanitize_address(address)
+        
+        parts = [part.strip() for part in clean_address.split(',')]
         
         if len(parts) >= 3:
             street = parts[0]
@@ -40,6 +122,14 @@ class PropertyAPIService:
             state_zip = parts[2].split()
             state = state_zip[0] if state_zip else ""
             zip_code = state_zip[1] if len(state_zip) > 1 else ""
+            
+            # Validate components
+            if not street or len(street) < 2:
+                raise ValueError("Invalid street address")
+            if not city or len(city) < 2:
+                raise ValueError("Invalid city name")
+            if state and len(state) != 2:
+                logger.warning(f"State '{state}' may not be in standard format")
             
             return {
                 'street': street,
@@ -49,13 +139,36 @@ class PropertyAPIService:
                 'address1': street,
                 'address2': f"{city}, {state} {zip_code}".strip()
             }
-        else:
+        elif len(parts) == 2:
+            # Handle "Street, City State" format
+            street = parts[0]
+            city_state = parts[1].strip()
+            
+            # Try to split city and state
+            city_state_parts = city_state.rsplit(' ', 1)
+            if len(city_state_parts) == 2:
+                city = city_state_parts[0]
+                state = city_state_parts[1]
+            else:
+                city = city_state
+                state = ""
+            
             return {
-                'street': address,
+                'street': street,
+                'city': city,
+                'state': state,
+                'zip': '',
+                'address1': street,
+                'address2': f"{city}, {state}".strip()
+            }
+        else:
+            # Fallback for single part address
+            return {
+                'street': clean_address,
                 'city': '',
                 'state': '',
                 'zip': '',
-                'address1': address,
+                'address1': clean_address,
                 'address2': ''
             }
     
@@ -64,7 +177,7 @@ class PropertyAPIService:
         Get basic property profile from Attom API
         Uses the /property/basicprofile endpoint
         """
-        print(f"🏠 Fetching basic profile for: {address}")
+        logger.info(f"Fetching basic profile for address")
         
         address_parts = self.parse_address(address)
         
@@ -76,15 +189,15 @@ class PropertyAPIService:
                 'address2': address_parts['address2']
             }
             
-            print(f"📡 Basic Profile API Request: {params}")
-            response = requests.get(url, headers=self.headers, params=params)
+            logger.debug(f"Basic Profile API Request to {url}")
+            response = self.session.get(url, headers=self.headers, params=params, timeout=self.timeout)
             
             if response.status_code == 200:
                 data = response.json()
-                print(f"🔍 Basic Profile Response status: {data.get('status', {})}")
+                logger.debug(f"Basic Profile Response received")
                 
                 if data and data.get('status', {}).get('total', 0) > 0:
-                    print("✅ Basic profile retrieved")
+                    logger.info("Basic profile retrieved successfully")
                     return {
                         'success': True,
                         'data': data,
@@ -92,7 +205,7 @@ class PropertyAPIService:
                         'property': data.get('property', [])
                     }
                 else:
-                    print("❌ No basic profile found")
+                    logger.warning("No basic profile found")
                     return {
                         'success': False,
                         'error': 'No basic profile found',
@@ -100,19 +213,19 @@ class PropertyAPIService:
                         'message': data.get('status', {}).get('msg', 'No data available')
                     }
             else:
-                print(f"❌ Basic Profile API Error {response.status_code}: {response.text}")
+                logger.error(f"Basic Profile API Error {response.status_code}")
                 return {
                     'success': False,
                     'error': f"Basic Profile API Error {response.status_code}",
-                    'details': response.text
+                    'message': 'Unable to retrieve property profile'
                 }
                 
         except Exception as e:
-            print(f"❌ Basic profile request failed: {e}")
+            logger.error(f"Basic profile request failed: {str(e)[:100]}")
             return {
                 'success': False,
                 'error': 'Basic profile request failed',
-                'details': str(e)
+                'message': 'Unable to process request'
             }
 
     def get_avm_history(self, address: str) -> Optional[Dict]:
@@ -121,7 +234,7 @@ class PropertyAPIService:
         Uses the /avm/avmhistory/detail endpoint
         Based on: https://api.developer.attomdata.com/docs#!/Valuation32V1/AvmHistoryDetail
         """
-        print(f"📈 Fetching AVM history for: {address}")
+        logger.info(f"Fetching AVM history for address")
         
         address_parts = self.parse_address(address)
         
@@ -140,15 +253,15 @@ class PropertyAPIService:
             # 'compcount': '10',      # Number of comparable properties
             # 'geoid': '',            # Geographic ID if available
             
-            print(f"📡 AVM API Request: {params}")
-            response = requests.get(url, headers=self.headers, params=params)
+            logger.debug(f"AVM API Request to {url}")
+            response = self.session.get(url, headers=self.headers, params=params, timeout=self.timeout)
             
             if response.status_code == 200:
                 data = response.json()
-                print(f"🔍 AVM Response status: {data.get('status', {})}")
+                logger.debug(f"AVM Response received")
                 
                 if data and data.get('status', {}).get('total', 0) > 0:
-                    print("✅ AVM history retrieved")
+                    logger.info("AVM history retrieved successfully")
                     return {
                         'success': True,
                         'data': data,
@@ -157,7 +270,7 @@ class PropertyAPIService:
                         'comparable_sales': data.get('compSales', [])
                     }
                 else:
-                    print("❌ No AVM history found")
+                    logger.warning("No AVM history found")
                     return {
                         'success': False,
                         'error': 'No AVM history found',
@@ -165,19 +278,19 @@ class PropertyAPIService:
                         'message': data.get('status', {}).get('msg', 'No data available')
                     }
             else:
-                print(f"❌ AVM API Error {response.status_code}: {response.text}")
+                logger.error(f"AVM API Error {response.status_code}")
                 return {
                     'success': False,
                     'error': f"AVM API Error {response.status_code}",
-                    'details': response.text
+                    'message': 'Unable to retrieve valuation data'
                 }
                 
         except Exception as e:
-            print(f"❌ AVM request failed: {e}")
+            logger.error(f"AVM request failed: {str(e)[:100]}")
             return {
                 'success': False,
                 'error': 'AVM request failed',
-                'details': str(e)
+                'message': 'Unable to process valuation request'
             }
     
     def clean_basic_profile_for_homeowners(self, profile_data: Dict) -> Dict:
@@ -212,7 +325,8 @@ class PropertyAPIService:
                 'data_retrieved': datetime.now().strftime('%Y-%m-%d %H:%M:%S')
             }
             
-            return cleaned_data
+            # Validate and sanitize financial data
+            return self._sanitize_financial_data(cleaned_data)
             
         except Exception as e:
             return {
@@ -258,7 +372,8 @@ class PropertyAPIService:
                 'data_retrieved': datetime.now().strftime('%Y-%m-%d %H:%M:%S')
             }
             
-            return cleaned_data
+            # Validate and sanitize financial data
+            return self._sanitize_financial_data(cleaned_data)
             
         except Exception as e:
             return {
@@ -272,7 +387,7 @@ class PropertyAPIService:
         """
         Complete workflow: Get basic profile data and clean it for homeowners
         """
-        print(f"🏠 Getting basic profile report for: {address}")
+        logger.info("Getting basic profile report")
         
         # Get basic profile data
         profile_result = self.get_basic_profile(address)
@@ -319,6 +434,80 @@ class PropertyAPIService:
                 basic_data['valuation_note'] = 'No current market valuation available - showing basic property data only'
             
             return basic_data
+    
+    def _validate_financial_value(self, value: Any, field_name: str) -> bool:
+        """Validate financial values for reasonableness"""
+        if not value or value == 'N/A' or value == '':
+            return True
+        
+        try:
+            # Convert string values to numeric
+            if isinstance(value, str):
+                numeric_value = float(value.replace('$', '').replace(',', ''))
+            else:
+                numeric_value = float(value)
+            
+            # Define reasonable ranges for different value types
+            ranges = {
+                'property_value': (1000, 100000000),      # $1K to $100M
+                'assessment_value': (500, 50000000),      # $500 to $50M
+                'tax_amount': (10, 1000000),              # $10 to $1M
+                'sale_price': (1000, 100000000),          # $1K to $100M
+                'per_sqft': (10, 10000),                  # $10 to $10K per sq ft
+            }
+            
+            # Determine which range to use
+            range_key = 'property_value'  # default
+            if 'tax' in field_name.lower():
+                range_key = 'tax_amount'
+            elif 'assessment' in field_name.lower() or 'assessed' in field_name.lower():
+                range_key = 'assessment_value'
+            elif 'sale' in field_name.lower():
+                range_key = 'sale_price'
+            elif 'sqft' in field_name.lower() or 'per_sq_ft' in field_name.lower():
+                range_key = 'per_sqft'
+            
+            if range_key in ranges:
+                min_val, max_val = ranges[range_key]
+                is_valid = min_val <= numeric_value <= max_val
+                
+                if not is_valid:
+                    logger.warning(f"Suspicious {field_name} value: ${numeric_value:,} (range: ${min_val:,}-${max_val:,})")
+                
+                return is_valid
+            
+            return True
+            
+        except (ValueError, TypeError) as e:
+            logger.warning(f"Invalid {field_name} value: {value} - {e}")
+            return False
+    
+    def _sanitize_financial_data(self, data: Dict, property_type: str = '') -> Dict:
+        """Sanitize and validate financial data in property responses"""
+        if not isinstance(data, dict):
+            return data
+        
+        sanitized_data = {}
+        
+        for key, value in data.items():
+            # Skip non-financial fields
+            if key in ['address', 'owner', 'property_type', 'year_built', 'bedrooms', 'bathrooms']:
+                sanitized_data[key] = value
+                continue
+            
+            # Validate financial fields
+            if any(financial_term in key.lower() for financial_term in 
+                   ['value', 'price', 'amount', 'tax', 'assessment', 'sale']):
+                
+                if self._validate_financial_value(value, key):
+                    sanitized_data[key] = value
+                else:
+                    logger.warning(f"Removing invalid financial data for {key}: {value}")
+                    sanitized_data[key] = 'N/A'
+            else:
+                sanitized_data[key] = value
+        
+        return sanitized_data
 
     def get_complete_report(self, address: str) -> Dict:
         """
