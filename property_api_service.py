@@ -899,6 +899,449 @@ class PropertyAPIService:
                 'date': datetime.now().strftime('%Y-%m-%d')
             }
     
+    def get_sales_comparables(self, address: str) -> Optional[Dict]:
+        """
+        Get sales comparables data by leveraging AVM endpoint which includes compSales
+        """
+        logger.info(f"Fetching sales comparables for address using AVM endpoint")
+        
+        # Use the existing AVM method to get data that includes comparable sales
+        avm_result = self.get_avm_history(address)
+        
+        if avm_result and avm_result.get('success'):
+            # Extract comparable sales from AVM response
+            comparable_sales = avm_result.get('comparable_sales', [])
+            
+            if comparable_sales:
+                logger.info(f"Found {len(comparable_sales)} comparable sales in AVM data")
+                return {
+                    'success': True,
+                    'data': avm_result.get('data', {}),
+                    'status': avm_result.get('status', {}),
+                    'comparable_sales': comparable_sales
+                }
+            else:
+                logger.warning("No comparable sales found in AVM data")
+                return {
+                    'success': False,
+                    'error': 'No comparable sales found in AVM data',
+                    'data': None
+                }
+        else:
+            logger.error("Failed to get AVM data for comparable sales")
+            return {
+                'success': False,
+                'error': 'Failed to fetch AVM data for comparable sales',
+                'data': None
+            }
+    
+    def get_sales_comparables_by_propid(self, prop_id: str, address: Optional[str] = None) -> Dict:
+        """
+        Get sales comparables using property ID - with price filtering based on subject property AVM
+        """
+        logger.info(f"Fetching sales comparables for property ID: {prop_id}")
+        
+        # First, get the subject property's AVM value and property type for filtering
+        target_price = None
+        subject_property_type = None
+        if address:
+            try:
+                avm_result = self.get_property_report(address)
+                if avm_result and not avm_result.get('error'):
+                    # Extract AVM value from the result - it's in "current_estimated_value" field
+                    estimated_value_str = avm_result.get('current_estimated_value', '')
+                    if isinstance(estimated_value_str, str) and '$' in estimated_value_str:
+                        # Remove $ and commas, convert to float
+                        target_price = float(estimated_value_str.replace('$', '').replace(',', ''))
+                    logger.info(f"Using target price for filtering: ${target_price:,}" if target_price else "No target price available")
+                
+                # Also get the subject property type for comparison filtering
+                # Get the property's raw data to find its type
+                raw_avm_data = self.get_avm_history(address)
+                if raw_avm_data and raw_avm_data.get('success'):
+                    property_data = raw_avm_data.get('data', {}).get('property', [])
+                    if property_data:
+                        subject_summary = property_data[0].get('summary', {})
+                        subject_property_type = subject_summary.get('propclass') or subject_summary.get('propertyType')
+                        logger.info(f"Subject property type: {subject_property_type}")
+                        
+            except Exception as e:
+                logger.warning(f"Could not get AVM/property type for filtering: {str(e)[:50]}")
+        
+        try:
+            url = f"{self.base_url}/sale/snapshot"
+            
+            params = {
+                'attomid': prop_id,  # Use the Attom ID
+                'radius': '5',  # Search radius in miles
+                'pagesize': '1000'  # Number of results per page
+            }
+            
+            logger.info(f"Sales Comparables by PropID API Request to: {url}")
+            logger.info(f"Parameters: {params}")
+            
+            response = self.session.get(url, headers=self.headers, params=params, timeout=30)
+            
+            if response.status_code == 200:
+                data = response.json()
+                logger.info(f"Sales Comparables PropID Response status: {data.get('status', {})}")
+                
+                if data and data.get('status', {}).get('total', 0) > 0:
+                    logger.info("Sales comparables retrieved successfully by propId")
+                    
+                    # Clean the data for homeowners with price and property type filtering
+                    clean_data = self.clean_sales_comparables_for_homeowners({
+                        'success': True,
+                        'data': data,
+                        'comparable_sales': data.get('property', [])
+                    }, target_price, subject_property_type)
+                    
+                    return clean_data
+                else:
+                    logger.warning(f"No sales comparables found for propId: {prop_id}")
+                    return {
+                        'error': 'No sales comparables found for this property ID',
+                        'property_id': prop_id,
+                        'total_comparables': 0,
+                        'comparables': [],
+                        'date': datetime.now().strftime('%Y-%m-%d')
+                    }
+            else:
+                logger.error(f"Sales Comparables PropID API error: {response.status_code}")
+                return {
+                    'error': f'API request failed with status {response.status_code}',
+                    'property_id': prop_id,
+                    'total_comparables': 0,
+                    'comparables': [],
+                    'date': datetime.now().strftime('%Y-%m-%d')
+                }
+                
+        except Exception as e:
+            logger.error(f"Sales comparables by propId error: {str(e)[:100]}")
+            return {
+                'error': 'Failed to fetch sales comparables by property ID',
+                'property_id': prop_id,
+                'total_comparables': 0,
+                'comparables': [],
+                'date': datetime.now().strftime('%Y-%m-%d')
+            }
+    
+    def get_property_id(self, address: str) -> Dict:
+        """
+        Extract property ID from AVM or basic profile data
+        """
+        logger.info(f"Fetching property ID for address")
+        
+        try:
+            # Try AVM first as it usually has more detailed identifier data
+            avm_result = self.get_avm_history(address)
+            
+            if avm_result and avm_result.get('success'):
+                raw_data = avm_result.get('data', {})
+                
+                # Look for property ID in the raw response
+                property_data = raw_data.get('property', [])
+                if property_data:
+                    prop = property_data[0]
+                    identifier = prop.get('identifier', {})
+                    
+                    # Extract various ID types from Attom response
+                    prop_ids = {
+                        'attom_id': identifier.get('attomId'),
+                        'fips_id': identifier.get('fips'),
+                        'apn': identifier.get('apn'),  # Assessor Parcel Number
+                        'msa': identifier.get('msa'),
+                        'address': address
+                    }
+                    
+                    # Return the first available ID
+                    for id_type, id_value in prop_ids.items():
+                        if id_value:
+                            logger.info(f"Found property ID: {id_type} = {id_value}")
+                            return {
+                                'property_id': str(id_value),
+                                'id_type': id_type,
+                                'address': address,
+                                'all_ids': {k: v for k, v in prop_ids.items() if v},
+                                'date': datetime.now().strftime('%Y-%m-%d')
+                            }
+            
+            # Fallback to basic profile if AVM doesn't work
+            logger.info("Trying basic profile for property ID")
+            basic_result = self.get_basic_profile(address)
+            
+            if basic_result and basic_result.get('success'):
+                raw_data = basic_result.get('data', {})
+                property_data = raw_data.get('property', [])
+                
+                if property_data:
+                    prop = property_data[0]
+                    identifier = prop.get('identifier', {})
+                    
+                    prop_ids = {
+                        'attom_id': identifier.get('attomId'),
+                        'fips_id': identifier.get('fips'),
+                        'apn': identifier.get('apn'),
+                        'address': address
+                    }
+                    
+                    for id_type, id_value in prop_ids.items():
+                        if id_value:
+                            logger.info(f"Found property ID from basic profile: {id_type} = {id_value}")
+                            return {
+                                'property_id': str(id_value),
+                                'id_type': id_type,
+                                'address': address,
+                                'all_ids': {k: v for k, v in prop_ids.items() if v},
+                                'date': datetime.now().strftime('%Y-%m-%d')
+                            }
+            
+            # No property ID found
+            logger.warning("No property ID found in any data source")
+            return {
+                'error': 'No property ID found',
+                'address': address,
+                'message': 'Property identifier not available in API response',
+                'date': datetime.now().strftime('%Y-%m-%d')
+            }
+            
+        except Exception as e:
+            logger.error(f"Error extracting property ID: {str(e)[:100]}")
+            return {
+                'error': 'Failed to extract property ID',
+                'address': address,
+                'message': str(e)[:100],
+                'date': datetime.now().strftime('%Y-%m-%d')
+            }
+    
+    def get_sales_comparables_by_propid_raw(self, prop_id: str) -> Dict:
+        """
+        Get RAW sales comparables data - no processing, just return what Attom sends
+        """
+        logger.info(f"Fetching RAW sales comparables for property ID: {prop_id}")
+        
+        try:
+            url = f"{self.base_url}/sale/snapshot"
+            
+            params = {
+                'attomid': prop_id,
+                'radius': '5',
+                'pagesize': '100'  # Limit to 100 for easier viewing
+            }
+            
+            logger.info(f"Raw Sales Comparables API Request to: {url}")
+            response = self.session.get(url, headers=self.headers, params=params, timeout=30)
+            
+            if response.status_code == 200:
+                data = response.json()
+                logger.info(f"Raw API Response Status: {data.get('status', {})}")
+                return {
+                    'success': True,
+                    'attom_id': prop_id,
+                    'raw_attom_response': data
+                }
+            else:
+                logger.error(f"Raw API error: {response.status_code}")
+                return {
+                    'success': False,
+                    'error': f'API returned status {response.status_code}',
+                    'attom_id': prop_id
+                }
+                
+        except Exception as e:
+            logger.error(f"Raw sales comparables error: {str(e)}")
+            return {
+                'success': False,
+                'error': str(e),
+                'attom_id': prop_id
+            }
+    
+    def _calculate_price_per_sqft(self, sale_amount, square_feet):
+        """Safely calculate price per square foot"""
+        try:
+            if not sale_amount or not square_feet:
+                return 'N/A'
+            
+            # Ensure both values are numeric
+            amount = float(sale_amount) if isinstance(sale_amount, (int, float, str)) else 0
+            sqft = float(square_feet) if isinstance(square_feet, (int, float, str)) else 0
+            
+            if amount > 0 and sqft > 0:
+                return f"${amount / sqft:.2f}"
+            else:
+                return 'N/A'
+        except (ValueError, TypeError, ZeroDivisionError):
+            return 'N/A'
+    
+    def _is_similar_property_type(self, subject_type: str, comp_type: str) -> bool:
+        """Check if two property types are similar enough for comparison"""
+        if not subject_type or not comp_type:
+            return True  # If type info is missing, allow comparison
+        
+        # Normalize property types to lower case for comparison
+        subject_norm = subject_type.lower()
+        comp_norm = comp_type.lower()
+        
+        # Single Family Residence variations
+        sfr_keywords = ['single family', 'sfr', 'residence', 'townhouse', 'detached']
+        
+        # Condo/Coop variations  
+        condo_keywords = ['condo', 'condominium', 'cooperative', 'co-op']
+        
+        # Multi-family variations
+        multi_keywords = ['multi', 'duplex', 'triplex', 'fourplex', 'apartment']
+        
+        # Commercial variations
+        commercial_keywords = ['commercial', 'retail', 'office', 'warehouse', 'industrial']
+        
+        # Check if both are single family residences
+        subject_is_sfr = any(keyword in subject_norm for keyword in sfr_keywords)
+        comp_is_sfr = any(keyword in comp_norm for keyword in sfr_keywords)
+        
+        if subject_is_sfr and comp_is_sfr:
+            return True
+            
+        # Check if both are condos
+        subject_is_condo = any(keyword in subject_norm for keyword in condo_keywords)
+        comp_is_condo = any(keyword in comp_norm for keyword in condo_keywords)
+        
+        if subject_is_condo and comp_is_condo:
+            return True
+            
+        # Check if both are multi-family
+        subject_is_multi = any(keyword in subject_norm for keyword in multi_keywords)
+        comp_is_multi = any(keyword in comp_norm for keyword in multi_keywords)
+        
+        if subject_is_multi and comp_is_multi:
+            return True
+            
+        # Check if both are commercial (should not match residential)
+        subject_is_commercial = any(keyword in subject_norm for keyword in commercial_keywords)
+        comp_is_commercial = any(keyword in comp_norm for keyword in commercial_keywords)
+        
+        if subject_is_commercial and comp_is_commercial:
+            return True
+            
+        # If one is commercial and other is residential, don't match
+        if (subject_is_commercial and not comp_is_commercial) or (comp_is_commercial and not subject_is_commercial):
+            return False
+        
+        # For exact matches
+        if subject_norm == comp_norm:
+            return True
+            
+        # Default to not allowing comparison if we can't categorize properly
+        return False
+    
+    def get_sales_comparables_report(self, address: str) -> Dict:
+        """
+        Complete workflow: Get sales comparables and clean them for homeowners
+        """
+        logger.info(f"Getting sales comparables report for address")
+        
+        # Get sales comparables data
+        comparables_result = self.get_sales_comparables(address)
+        
+        # Clean it for homeowners
+        clean_data = self.clean_sales_comparables_for_homeowners(comparables_result)
+        
+        return clean_data
+    
+    def clean_sales_comparables_for_homeowners(self, raw_data: Optional[Dict], target_price: Optional[float] = None, subject_property_type: Optional[str] = None) -> Dict:
+        """Clean sales comparables data for homeowner-friendly display"""
+        if not raw_data or not raw_data.get('success'):
+            return {
+                'error': 'No sales comparables data available',
+                'address': 'Unknown',
+                'total_comparables': 0,
+                'comparables': [],
+                'date': datetime.now().strftime('%Y-%m-%d')
+            }
+        
+        try:
+            data = raw_data.get('data', {})
+            # Get comparables from the comparable_sales data (from AVM endpoint)
+            comparables = raw_data.get('comparable_sales', [])
+            
+            cleaned_comparables = []
+            for comp in comparables:  # Process all comparables (up to 1000)
+                identifier = comp.get('identifier', {})
+                address_info = comp.get('address', {})
+                sale_info = comp.get('sale', {})
+                lot_info = comp.get('lot', {})
+                building_info = comp.get('building', {})
+                
+                # Extract key comparable data
+                # Extract property details with correct field mappings
+                square_feet = building_info.get('size', {}).get('universalsize', 0)
+                sale_amount = sale_info.get('amount', {}).get('saleamt', 0)
+                
+                comp_data = {
+                    'address': f"{address_info.get('line1', '')} {address_info.get('line2', '')}".strip(),
+                    'city': address_info.get('locality', ''),
+                    'state': address_info.get('countrySubd', ''),
+                    'zip': address_info.get('postal1', ''),
+                    'sale_date': sale_info.get('amount', {}).get('salerecdate') or sale_info.get('saleTransDate') or sale_info.get('salesearchdate', 'N/A'),
+                    'sale_price': f"${sale_amount:,}" if sale_amount else 'N/A',
+                    'raw_sale_price': sale_amount,
+                    'square_feet': square_feet,
+                    'bedrooms': building_info.get('rooms', {}).get('beds', 0),
+                    'bathrooms': building_info.get('rooms', {}).get('bathstotal', 0),
+                    'lot_size': lot_info.get('lotSize1', 0),
+                    'year_built': comp.get('summary', {}).get('yearbuilt', 'N/A'),
+                    'price_per_sqft': self._calculate_price_per_sqft(sale_amount, square_feet),
+                    'distance_miles': identifier.get('distanceMiles', 'N/A'),
+                    'property_type': comp.get('summary', {}).get('propclass', 'N/A')
+                }
+                
+                # Only include properties with valid sale prices (skip N/A sales)
+                if comp_data['raw_sale_price'] and comp_data['raw_sale_price'] > 0:
+                    # Apply property type filtering first
+                    property_type_match = True
+                    if subject_property_type and comp_data['property_type'] != 'N/A':
+                        property_type_match = self._is_similar_property_type(subject_property_type, comp_data['property_type'])
+                    
+                    if property_type_match:
+                        # Apply price filtering if target price is provided
+                        if target_price:
+                            # Filter to ±30% of target price for better comparables
+                            price_range_low = target_price * 0.7
+                            price_range_high = target_price * 1.3
+                            
+                            if price_range_low <= comp_data['raw_sale_price'] <= price_range_high:
+                                cleaned_comparables.append(comp_data)
+                        else:
+                            # No target price filtering, but still only include valid sales with matching property type
+                            cleaned_comparables.append(comp_data)
+            
+            # Calculate average metrics
+            valid_prices = [comp['raw_sale_price'] for comp in cleaned_comparables if comp['raw_sale_price'] and comp['raw_sale_price'] > 0]
+            avg_price = sum(valid_prices) / len(valid_prices) if valid_prices else 0
+            
+            valid_sqft = [comp['square_feet'] for comp in cleaned_comparables if comp['square_feet'] and comp['square_feet'] > 0]
+            avg_sqft = sum(valid_sqft) / len(valid_sqft) if valid_sqft else 0
+            
+            return {
+                'address': data.get('property', [{}])[0].get('address', {}).get('line1', 'Unknown') if data.get('property') else 'Unknown',
+                'total_comparables': len(cleaned_comparables),
+                'average_sale_price': f"${avg_price:,.0f}" if avg_price > 0 else 'N/A',
+                'raw_average_price': avg_price,
+                'average_square_feet': f"{avg_sqft:,.0f}" if avg_sqft > 0 else 'N/A',
+                'comparables': cleaned_comparables,
+                'search_radius': '5 miles',
+                'date': datetime.now().strftime('%Y-%m-%d')
+            }
+            
+        except Exception as e:
+            logger.error(f"Error cleaning sales comparables data: {str(e)[:100]}")
+            return {
+                'error': f'Error processing sales comparables data',
+                'address': 'Unknown',
+                'total_comparables': 0,
+                'comparables': [],
+                'date': datetime.now().strftime('%Y-%m-%d')
+            }
+    
     def get_assessment_history_report(self, address: str) -> Dict:
         """
         Complete workflow: Get assessment history and clean it for homeowners
@@ -1061,16 +1504,17 @@ if __name__ == "__main__":
         print("5. Comprehensive analysis (Basic + AVM + Timeline + Charts)")
         print("6. All events snapshot (comprehensive timeline)")
         print("7. Assessment history (charts data)")
-        print("8. Quit")
+        print("8. Sales comparables (within 5-mile radius)")
+        print("9. Quit")
         
-        choice = input("\nSelect option (1-8): ").strip()
+        choice = input("\nSelect option (1-9): ").strip()
         
-        if choice in ['8', 'quit', 'exit', 'q']:
+        if choice in ['9', 'quit', 'exit', 'q']:
             print("Goodbye!")
             break
         
-        if choice not in ['1', '2', '3', '4', '5', '6', '7']:
-            print("Please select a valid option (1-8)")
+        if choice not in ['1', '2', '3', '4', '5', '6', '7', '8']:
+            print("Please select a valid option (1-9)")
             continue
             
         address = input("Enter property address: ").strip()
@@ -1095,13 +1539,95 @@ if __name__ == "__main__":
             report = service.get_all_events_report(address)
         elif choice == '7':
             report = service.get_assessment_history_report(address)
+        elif choice == '8':
+            # Sales comparables - first get property ID, then get comparables
+            print("🏠 Getting property ID first...")
+            prop_id_result = service.get_property_id(address)
+            if 'property_id' in prop_id_result:
+                prop_id = prop_id_result['property_id']
+                print(f"✅ Found Property ID: {prop_id}")
+                print(f"🏘️ Getting filtered sales comparables within 5-mile radius (±30% of property value)...")
+                report = service.get_sales_comparables_by_propid(prop_id, address)
+            else:
+                print("❌ Could not get property ID")
+                report = prop_id_result
         
         print("\n" + "=" * 60)
         print("🏠 PROPERTY REPORT")
         print("=" * 60)
         
+        # Special handling for sales comparables
+        if choice == '8' and 'comparables' in report:
+            print("🏘️ SALES COMPARABLES REPORT")
+            print("=" * 60)
+            
+            if 'error' in report:
+                print(f"❌ Error: {report['error']}")
+            else:
+                comparables = report.get('comparables', [])
+                
+                print(f"📊 Total Found: {report.get('total_comparables', 0):,} comparable sales")
+                print(f"💰 Average Sale Price: {report.get('average_sale_price', 'N/A')}")
+                print(f"📍 Search Radius: {report.get('search_radius', '5 miles')}")
+                print(f"🎯 Price Range: ±30% of property AVM value")
+                print()
+                
+                if comparables:
+                    print("🏘️ COMPARABLE SALES (PRICE FILTERED):")
+                    print("-" * 80)
+                    
+                    # Limit display to first 15 for readability
+                    for i, comp in enumerate(comparables[:15]):
+                        print(f"{i+1:2d}. {comp.get('address', 'N/A')}")
+                        print(f"    📍 {comp.get('city', '')}, {comp.get('state', '')} {comp.get('zip', '')}")
+                        print(f"    💰 {comp.get('sale_price', 'N/A')} ({comp.get('sale_date', 'N/A')})")
+                        
+                        # Property details
+                        sqft = comp.get('square_feet', 0)
+                        beds = comp.get('bedrooms', 0)
+                        baths = comp.get('bathrooms', 0)
+                        lot_size = comp.get('lot_size', 0)
+                        year_built = comp.get('year_built', 'N/A')
+                        price_per_sqft = comp.get('price_per_sqft', 'N/A')
+                        
+                        # Format property info line
+                        property_info = []
+                        if sqft and sqft > 0:
+                            property_info.append(f"{sqft:,} sqft")
+                        if beds and beds > 0:
+                            property_info.append(f"{beds} bed")
+                        if baths and baths > 0:
+                            property_info.append(f"{baths} bath")
+                        
+                        if property_info:
+                            print(f"    🏠 {', '.join(property_info)}")
+                        
+                        # Additional details line
+                        additional_info = []
+                        if lot_size and lot_size > 0:
+                            additional_info.append(f"{lot_size:.2f} acres" if lot_size > 1 else f"{lot_size:.3f} acres")
+                        if year_built != 'N/A':
+                            additional_info.append(f"Built {year_built}")
+                        if price_per_sqft != 'N/A' and sqft > 0:
+                            additional_info.append(f"${price_per_sqft}/sqft")
+                        
+                        property_type = comp.get('property_type', '')
+                        if property_type and property_type != 'N/A':
+                            additional_info.append(f"{property_type}")
+                        
+                        if additional_info:
+                            print(f"    📊 {', '.join(additional_info)}")
+                        
+                        print()
+                    
+                    if len(comparables) > 15:
+                        print(f"... and {len(comparables) - 15} more comparable sales")
+                    
+                else:
+                    print("❌ No comparable sales found in the price range")
+                
         # Special handling for comprehensive analysis
-        if choice == '5' and 'analysis_type' in report and report['analysis_type'] == 'comprehensive':
+        elif choice == '5' and 'analysis_type' in report and report['analysis_type'] == 'comprehensive':
             print("🎯 COMPREHENSIVE PROPERTY ANALYSIS")
             print("=" * 60)
             

@@ -6,6 +6,7 @@ This document tracks the comprehensive development of an AVM (Automated Valuatio
 
 ## ✨ Key Features Implemented
 
+- **Professional Sales Comparables**: Smart filtering by property type and price range (±30%)
 - **Interactive D3.js Charts**: Professional property assessment visualizations
 - **Comprehensive Analysis**: Basic + AVM + Timeline + Auto-Charts in one call
 - **Assessment History**: 14+ years of property tax and valuation trends
@@ -15,7 +16,8 @@ This document tracks the comprehensive development of an AVM (Automated Valuatio
 - **Developer Library**: JavaScript library for easy chart embedding
 - **Auto-Browser Launch**: Seamless chart opening with URL parameters
 - **Raw Data Access**: Full API responses for advanced use cases
-- **REST API**: 17 HTTP endpoints with JSON responses
+- **Enhanced Security**: Input validation, secure logging, and financial data validation
+- **REST API**: 20+ HTTP endpoints with JSON responses
 
 ## 🚀 Development Timeline
 
@@ -43,7 +45,7 @@ This document tracks the comprehensive development of an AVM (Automated Valuatio
 - Synchronized REST API endpoints
 - Optimized file structure
 
-### Phase 5: Security Hardening (Latest Update)
+### Phase 5: Security Hardening 
 - **Comprehensive Input Validation**: Added address sanitization and format validation
 - **Request Security**: Implemented 10-second timeouts and connection pooling
 - **API Key Protection**: Secured API key handling with no exposure in logs
@@ -51,6 +53,16 @@ This document tracks the comprehensive development of an AVM (Automated Valuatio
 - **Financial Data Validation**: Added value range validation and outlier detection
 - **Error Handling**: Generic error messages prevent information disclosure
 - **Production Security**: Created secure REST API wrapper with validation decorators
+
+### Phase 6: Professional Sales Comparables (Latest Update)
+- **Smart Property Type Filtering**: Only shows same property types (SFR-to-SFR, Condo-to-Condo, etc.)
+- **Intelligent Price Filtering**: ±30% of subject property's AVM value for relevant comparables
+- **Data Quality Control**: Excludes foreclosures, family transfers, and invalid sales data
+- **Comprehensive Property Details**: Square footage, bed/bath, lot size, year built, price/sqft
+- **Enhanced CLI Interface**: Added CLI option 8 for sales comparables with detailed output
+- **Professional Display Format**: Organized property information with icons and clear formatting
+- **Multi-Layer Filtering**: Geographic (5-mile radius) + price range + property type matching
+- **Property ID Integration**: Seamless property ID extraction and sales comparable lookup
 
 ## 📡 API Endpoints (17 Total)
 

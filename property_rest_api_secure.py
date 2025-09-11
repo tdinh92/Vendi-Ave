@@ -61,6 +61,35 @@ def health_check():
         'service': 'Property Valuation API'
     })
 
+@app.route('/', methods=['GET'])
+def api_documentation():
+    """API documentation endpoint"""
+    return jsonify({
+        'service': 'Property API Service (Secure)',
+        'version': '1.0.0',
+        'endpoints': {
+            'GET /': 'This documentation',
+            'GET /health': 'Health check',
+            'POST /property/combined': 'Combined property report with fallback',
+            'POST /property/avm': 'AVM property report only',
+            'POST /property/basic': 'Basic property profile only',
+            'POST /property/comprehensive': 'Comprehensive analysis (AVM + Basic + Assessment History + Auto-Charts)',
+            'GET /salescomparables/address/{street}/{city}/{county}/{state}/{zip}': 'Sales comparables by address path',
+            'GET /salescomparables/propid/{propId}': 'Sales comparables by property ID (recommended)'
+        },
+        'request_format': {
+            'address': '123 Main St, Boston, MA 02101'
+        },
+        'security_features': [
+            'Input validation and sanitization',
+            'Request timeouts and DoS protection',
+            'API key security',
+            'Secure logging',
+            'Financial data validation',
+            'Generic error handling'
+        ]
+    })
+
 @app.route('/property/combined', methods=['POST'])
 @validate_address_input
 def get_combined_report():
@@ -128,6 +157,135 @@ def get_basic_profile():
         return jsonify({
             'error': 'Failed to get basic profile',
             'message': 'Unable to process property profile'
+        }), 500
+
+@app.route('/property/comprehensive', methods=['POST'])
+@validate_address_input
+def get_comprehensive_analysis():
+    """
+    Get comprehensive property analysis (AVM + Basic + Assessment History + Auto-Charts)
+    
+    POST /property/comprehensive
+    Body: {"address": "123 Main St, Boston, MA 02101"}
+    
+    This endpoint provides the ultimate analysis combining:
+    - AVM property valuation
+    - Basic property profile
+    - Assessment history timeline
+    - Automatic chart opening in browser
+    """
+    try:
+        data = request.validated_data
+        address = data['address']
+        
+        result = property_service.get_comprehensive_analysis(address)
+        return jsonify(result)
+        
+    except Exception as e:
+        logger.error(f"Comprehensive analysis error: {str(e)[:100]}")
+        return jsonify({
+            'error': 'Failed to get comprehensive analysis',
+            'message': 'Unable to process comprehensive property analysis'
+        }), 500
+
+@app.route('/salescomparables/address/<path:street>/<city>/<county>/<state>/<zip>', methods=['GET'])
+def get_sales_comparables_by_path(street, city, county, state, zip):
+    """
+    Get sales comparables by address path parameters
+    
+    GET /salescomparables/address/{street}/{city}/{county}/{state}/{zip}
+    
+    Example: /salescomparables/address/123 Main St/Boston/Suffolk/MA/02101
+    """
+    try:
+        # Construct address from path parameters
+        address = f"{street}, {city}, {state} {zip}"
+        
+        # Validate address using the service's validation method
+        try:
+            validated_address = property_service.validate_and_sanitize_address(address)
+        except ValueError as ve:
+            return jsonify({'error': str(ve)}), 400
+        
+        # Get sales comparables
+        result = property_service.get_sales_comparables_report(validated_address)
+        return jsonify(result)
+        
+    except Exception as e:
+        logger.error(f"Sales comparables error: {str(e)[:100]}")
+        return jsonify({
+            'error': 'Failed to get sales comparables',
+            'message': 'Unable to process sales comparables request'
+        }), 500
+
+@app.route('/salescomparables/propid/<propId>', methods=['GET'])
+def get_sales_comparables_by_propid(propId):
+    """
+    Get sales comparables by property ID
+    
+    GET /salescomparables/propid/{propId}
+    
+    Example: /salescomparables/propid/12345678
+    """
+    try:
+        # Validate propId (basic validation)
+        if not propId or not propId.isdigit():
+            return jsonify({'error': 'Invalid property ID format'}), 400
+        
+        # Get sales comparables using propId (no address available for price filtering in this endpoint)
+        result = property_service.get_sales_comparables_by_propid(propId)
+        return jsonify(result)
+        
+    except Exception as e:
+        logger.error(f"Sales comparables by propId error: {str(e)[:100]}")
+        return jsonify({
+            'error': 'Failed to get sales comparables',
+            'message': 'Unable to process sales comparables request by property ID'
+        }), 500
+
+@app.route('/property/propid', methods=['POST'])
+@validate_address_input
+def get_property_id():
+    """
+    Get property ID for a given address
+    
+    POST /property/propid
+    Body: {"address": "123 Main St, Boston, MA 02101"}
+    """
+    try:
+        data = request.validated_data
+        address = data['address']
+        
+        result = property_service.get_property_id(address)
+        return jsonify(result)
+        
+    except Exception as e:
+        logger.error(f"Property ID error: {str(e)[:100]}")
+        return jsonify({
+            'error': 'Failed to get property ID',
+            'message': 'Unable to retrieve property identifier'
+        }), 500
+
+@app.route('/salescomparables/propid/<propId>/raw', methods=['GET'])
+def get_raw_sales_comparables_by_propid(propId):
+    """
+    Get RAW sales comparables data by property ID (for debugging)
+    
+    GET /salescomparables/propid/{propId}/raw
+    """
+    try:
+        if not propId or not propId.isdigit():
+            return jsonify({'error': 'Invalid property ID format'}), 400
+        
+        # Get raw sales comparables data
+        result = property_service.get_sales_comparables_by_propid_raw(propId)
+        return jsonify(result)
+        
+    except Exception as e:
+        logger.error(f"Raw sales comparables error: {str(e)[:100]}")
+        return jsonify({
+            'error': 'Failed to get raw sales comparables',
+            'message': str(e)[:100]
         }), 500
 
 if __name__ == '__main__':

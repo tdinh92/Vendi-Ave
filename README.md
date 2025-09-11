@@ -8,6 +8,7 @@ This service combines Attom Data's AVM (Automated Valuation Model) and Basic Pro
 
 ## ✨ Features
 
+- **Professional Sales Comparables**: Smart filtering by property type and price range (±30%)
 - **Interactive D3.js Charts**: Professional property assessment visualizations
 - **Comprehensive Analysis**: Basic + AVM + Timeline + Auto-Charts in one call
 - **Assessment History**: 14+ years of property tax and valuation trends
@@ -17,7 +18,8 @@ This service combines Attom Data's AVM (Automated Valuation Model) and Basic Pro
 - **Developer Library**: JavaScript library for easy chart embedding
 - **Auto-Browser Launch**: Seamless chart opening with URL parameters
 - **Raw Data Access**: Full API responses for advanced use cases
-- **REST API**: 17 HTTP endpoints with JSON responses
+- **Enhanced Security**: Input validation, secure logging, and financial data validation
+- **REST API**: 20+ HTTP endpoints with JSON responses
 
 ## 🚀 Quick Start
 
@@ -80,6 +82,29 @@ curl -X POST http://localhost:5000/property/basic \
   -d '{"address": "123 Main St, Boston, MA 02101"}'
 ```
 
+#### Sales Comparables
+Get intelligent sales comparables filtered by property type and price range:
+```bash
+# Get property ID first
+curl -X POST http://localhost:5000/property/propid \
+  -H "Content-Type: application/json" \
+  -d '{"address": "123 Main St, Boston, MA 02101"}'
+
+# Get filtered sales comparables
+curl -X GET http://localhost:5000/salescomparables/propid/{propertyId}
+
+# Get raw sales comparables data
+curl -X GET http://localhost:5000/salescomparables/propid/{propertyId}/raw
+```
+
+#### Comprehensive Analysis
+Ultimate analysis combining AVM, basic profile, assessment history, and auto-charts:
+```bash
+curl -X POST http://localhost:5000/property/comprehensive \
+  -H "Content-Type: application/json" \
+  -d '{"address": "123 Main St, Boston, MA 02101"}'
+```
+
 #### Batch Processing
 Process up to 10 addresses at once:
 ```bash
@@ -118,6 +143,33 @@ curl -X POST http://localhost:5000/property/batch \
 }
 ```
 
+### Sales Comparables Response
+```json
+{
+  "total_comparables": 31,
+  "average_sale_price": "$1,190,867",
+  "search_radius": "5 miles",
+  "date": "2025-01-15",
+  "comparables": [
+    {
+      "address": "376 SALEM ST ANDOVER, MA 01810",
+      "city": "ANDOVER",
+      "state": "MA",
+      "zip": "01810",
+      "sale_price": "$1,425,000",
+      "sale_date": "2022-05-15",
+      "square_feet": 2800,
+      "bedrooms": 4,
+      "bathrooms": 3,
+      "lot_size": 0.45,
+      "year_built": 1995,
+      "price_per_sqft": "$508.93",
+      "property_type": "Single Family Residence / Townhouse"
+    }
+  ]
+}
+```
+
 ### Basic Profile Fallback
 ```json
 {
@@ -142,12 +194,18 @@ curl -X POST http://localhost:5000/property/batch \
 
 ```
 AVM_Api/
-├── property_api_service.py    # Core service logic
-├── property_rest_api.py       # Flask REST API wrapper  
-├── requirements.txt          # Python dependencies
-├── .env                      # Environment variables (API key)
-├── API_USAGE_GUIDE.md        # Detailed usage examples
-└── README.md                 # This file
+├── property_api_service.py       # Core service logic with CLI interface
+├── property_rest_api_secure.py   # Secure Flask REST API wrapper
+├── property_rest_api.py          # Original Flask REST API wrapper  
+├── requirements.txt              # Python dependencies
+├── requirements_secure.txt       # Secure dependencies
+├── .env                          # Environment variables (API key)
+├── CLAUDE.md                     # Development log and documentation
+├── static/
+│   └── assessment-charts.js      # JavaScript library for charts
+├── templates/
+│   └── assessment_charts.html    # Interactive chart interface
+└── README.md                     # This file
 ```
 
 ## 🛠️ Development
@@ -157,14 +215,23 @@ AVM_Api/
 python property_api_service.py
 ```
 
-This starts an interactive command-line interface for testing the service directly.
+This starts an interactive command-line interface with 8 options:
+1. Combined report (AVM + Basic Profile fallback)
+2. AVM report only  
+3. Basic profile only
+4. Complete report (both AVM and Basic Profile)
+5. Comprehensive analysis (Basic + AVM + Timeline + Charts)
+6. All events snapshot (comprehensive timeline)
+7. Assessment history (charts data)
+8. **Sales comparables (within 5-mile radius)** - NEW!
 
 ### Available Methods
 - `get_combined_report(address)` - Combined AVM + basic profile
 - `get_property_report(address)` - AVM report only
 - `get_basic_profile_report(address)` - Basic profile only
-- `get_avm_history(address)` - Raw AVM data
-- `get_basic_profile(address)` - Raw basic profile data
+- `get_comprehensive_analysis(address)` - Ultimate analysis with auto-charts
+- `get_sales_comparables_by_propid(prop_id, address)` - Smart filtered comparables
+- `get_assessment_history_report(address)` - Assessment history for charts
 
 ## 🔒 Production Considerations
 
@@ -187,6 +254,38 @@ This starts an interactive command-line interface for testing the service direct
 - Log errors for debugging
 
 ## 📚 Documentation
+
+## 🏘️ Professional Sales Comparables
+
+Advanced sales comparables with intelligent filtering:
+
+### Smart Filtering Features:
+- **Property Type Matching**: Only shows same property types (SFR-to-SFR, Condo-to-Condo, etc.)
+- **Price Range Filtering**: ±30% of subject property's AVM value
+- **Valid Sales Only**: Excludes foreclosures, family transfers, and invalid data
+- **Geographic Proximity**: Within 5-mile radius
+
+### Comprehensive Property Details:
+- Square footage, bedrooms, bathrooms
+- Lot size, year built, property type
+- Price per square foot calculations
+- Sale date and distance from subject
+- Complete address information
+
+### Example Output:
+```
+📊 Total Found: 31 comparable sales
+💰 Average Sale Price: $1,190,867
+📍 Search Radius: 5 miles
+🎯 Price Range: ±30% of property AVM value
+
+🏘️ COMPARABLE SALES (PRICE FILTERED):
+ 1. 376 SALEM ST ANDOVER, MA 01810
+    📍 ANDOVER, MA 01810
+    💰 $1,425,000 (2022-05-15)
+    🏠 2,800 sqft, 4 bed, 3 bath
+    📊 0.45 acres, Built 1995, $508.93/sqft, Single Family Residence / Townhouse
+```
 
 ## 📊 Interactive Charts
 
