@@ -1,0 +1,524 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Property Assessment History Charts</title>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background-color: #f5f5f5;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        
+        .address-input {
+            margin-bottom: 20px;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 8px;
+        }
+        
+        .address-input input {
+            width: 400px;
+            padding: 10px;
+            font-size: 16px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            margin-right: 10px;
+        }
+        
+        .address-input button {
+            padding: 10px 20px;
+            font-size: 16px;
+            background: #007bff;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        
+        .address-input button:hover {
+            background: #0056b3;
+        }
+        
+        .chart-container {
+            margin: 30px 0;
+            padding: 20px;
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+            background: white;
+        }
+        
+        .chart-title {
+            font-size: 18px;
+            font-weight: bold;
+            margin-bottom: 15px;
+            color: #333;
+        }
+        
+        .chart {
+            width: 100%;
+            height: 400px;
+        }
+        
+        .axis {
+            font-size: 12px;
+        }
+        
+        .line {
+            fill: none;
+            stroke-width: 3;
+        }
+        
+        .assessment-line { stroke: #2E8B57; }
+        .tax-line { stroke: #DC143C; }
+        .sqft-line { stroke: #4169E1; }
+        
+        .dot {
+            r: 4;
+            stroke: white;
+            stroke-width: 2;
+        }
+        
+        .assessment-dot { fill: #2E8B57; }
+        .tax-dot { fill: #DC143C; }
+        .sqft-dot { fill: #4169E1; }
+        
+        .tooltip {
+            position: absolute;
+            padding: 8px 12px;
+            background: rgba(0, 0, 0, 0.8);
+            color: white;
+            border-radius: 4px;
+            font-size: 12px;
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+        
+        .loading {
+            text-align: center;
+            padding: 50px;
+            color: #666;
+        }
+        
+        .error {
+            color: #dc3545;
+            background: #f8d7da;
+            padding: 15px;
+            border-radius: 4px;
+            margin: 20px 0;
+        }
+        
+        .legend {
+            display: flex;
+            justify-content: center;
+            gap: 30px;
+            margin-top: 15px;
+            font-size: 14px;
+        }
+        
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .legend-color {
+            width: 20px;
+            height: 3px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Property Assessment History Visualization</h1>
+        
+        <div class="address-input">
+            <input type="text" id="addressInput" placeholder="Enter property address (e.g., 4 Fiorenza Drive, Wilmington, MA 01887)" value="4 Fiorenza Drive, Wilmington, MA 01887">
+            <button onclick="loadCharts()">Load Charts</button>
+        </div>
+        
+        <div id="loading" class="loading" style="display: none;">
+            Loading assessment data...
+        </div>
+        
+        <div id="error" class="error" style="display: none;"></div>
+        
+        <div id="property-info" style="display: none; background: #e7f3ff; padding: 15px; border-radius: 8px; margin: 20px 0;">
+            <h3 id="property-address"></h3>
+            <p id="property-details"></p>
+        </div>
+        
+        <div class="chart-container" id="assessment-chart-container" style="display: none;">
+            <div class="chart-title">Total Assessed Value Over Time</div>
+            <svg class="chart" id="assessment-chart"></svg>
+            <div class="legend">
+                <div class="legend-item">
+                    <div class="legend-color assessment-line"></div>
+                    <span>Assessed Value</span>
+                </div>
+            </div>
+        </div>
+        
+        <div class="chart-container" id="tax-chart-container" style="display: none;">
+            <div class="chart-title">Annual Property Tax Over Time</div>
+            <svg class="chart" id="tax-chart"></svg>
+            <div class="legend">
+                <div class="legend-item">
+                    <div class="legend-color tax-line"></div>
+                    <span>Annual Tax</span>
+                </div>
+            </div>
+        </div>
+        
+        <div class="chart-container" id="sqft-chart-container" style="display: none;">
+            <div class="chart-title">Assessed Value Per Square Foot Over Time</div>
+            <svg class="chart" id="sqft-chart"></svg>
+            <div class="legend">
+                <div class="legend-item">
+                    <div class="legend-color sqft-line"></div>
+                    <span>Value per Sq Ft</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="tooltip"></div>
+
+    <script>
+        // Configuration
+        const margin = { top: 20, right: 50, bottom: 70, left: 80 };
+        const width = 800 - margin.left - margin.right;
+        const height = 400 - margin.top - margin.bottom;
+
+        // Format functions
+        const formatCurrency = d3.format("$,.0f");
+        const formatCurrencyDetailed = d3.format("$,.2f");
+        
+        // Tooltip
+        const tooltip = d3.select('.tooltip');
+
+        async function loadCharts() {
+            const address = document.getElementById('addressInput').value.trim();
+            if (!address) {
+                showError('Please enter a property address');
+                return;
+            }
+
+            showLoading(true);
+            hideError();
+            hideCharts();
+
+            try {
+                const response = await fetch('/property/assessmenthistory', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ address: address })
+                });
+
+                const data = await response.json();
+                
+                if (!response.ok || data.error) {
+                    throw new Error(data.error || 'Failed to fetch data');
+                }
+
+                if (!data.assessments || data.assessments.length === 0) {
+                    throw new Error('No assessment history found for this address');
+                }
+
+                // Show property info
+                showPropertyInfo(data);
+
+                // Process data for charts
+                const chartData = processAssessmentData(data.assessments);
+                
+                // Create all three charts
+                createAssessmentChart(chartData);
+                createTaxChart(chartData);
+                createSqftChart(chartData);
+                
+                showCharts();
+                
+            } catch (error) {
+                showError(error.message);
+            } finally {
+                showLoading(false);
+            }
+        }
+
+        function processAssessmentData(assessments) {
+            return assessments.map(d => ({
+                year: +d.tax_year,
+                assessedValue: d.raw_total_assessed,
+                taxAmount: d.raw_tax_amount,
+                valuePerSqft: d.raw_assessed_per_sqft,
+                // Keep formatted versions for display
+                assessedValueFormatted: d.total_assessed_value,
+                taxAmountFormatted: d.tax_amount,
+                valuePerSqftFormatted: d.assessed_per_sqft
+            })).sort((a, b) => a.year - b.year);
+        }
+
+        function createAssessmentChart(data) {
+            const svg = d3.select('#assessment-chart');
+            svg.selectAll("*").remove(); // Clear previous chart
+            
+            const g = svg.append('g')
+                .attr('transform', `translate(${margin.left},${margin.top})`);
+
+            // Scales
+            const xScale = d3.scaleLinear()
+                .domain(d3.extent(data, d => d.year))
+                .range([0, width]);
+
+            const yScale = d3.scaleLinear()
+                .domain([0, d3.max(data, d => d.assessedValue) * 1.1])
+                .range([height, 0]);
+
+            // Line generator
+            const line = d3.line()
+                .x(d => xScale(d.year))
+                .y(d => yScale(d.assessedValue))
+                .curve(d3.curveMonotoneX);
+
+            // Add axes
+            g.append('g')
+                .attr('class', 'axis')
+                .attr('transform', `translate(0,${height})`)
+                .call(d3.axisBottom(xScale).tickFormat(d3.format('d')));
+
+            g.append('g')
+                .attr('class', 'axis')
+                .call(d3.axisLeft(yScale).tickFormat(formatCurrency));
+
+            // Add axis labels
+            g.append('text')
+                .attr('x', width / 2)
+                .attr('y', height + 50)
+                .style('text-anchor', 'middle')
+                .text('Year');
+
+            g.append('text')
+                .attr('transform', 'rotate(-90)')
+                .attr('y', -60)
+                .attr('x', -height / 2)
+                .style('text-anchor', 'middle')
+                .text('Assessed Value ($)');
+
+            // Add line
+            g.append('path')
+                .datum(data)
+                .attr('class', 'line assessment-line')
+                .attr('d', line);
+
+            // Add dots
+            g.selectAll('.assessment-dot')
+                .data(data)
+                .enter().append('circle')
+                .attr('class', 'dot assessment-dot')
+                .attr('cx', d => xScale(d.year))
+                .attr('cy', d => yScale(d.assessedValue))
+                .on('mouseover', function(event, d) {
+                    tooltip.style('opacity', 1)
+                        .html(`Year: ${d.year}<br/>Assessed Value: ${formatCurrency(d.assessedValue)}`)
+                        .style('left', (event.pageX + 10) + 'px')
+                        .style('top', (event.pageY - 10) + 'px');
+                })
+                .on('mouseout', function() {
+                    tooltip.style('opacity', 0);
+                });
+        }
+
+        function createTaxChart(data) {
+            const svg = d3.select('#tax-chart');
+            svg.selectAll("*").remove();
+            
+            const g = svg.append('g')
+                .attr('transform', `translate(${margin.left},${margin.top})`);
+
+            const xScale = d3.scaleLinear()
+                .domain(d3.extent(data, d => d.year))
+                .range([0, width]);
+
+            const yScale = d3.scaleLinear()
+                .domain([0, d3.max(data, d => d.taxAmount) * 1.1])
+                .range([height, 0]);
+
+            const line = d3.line()
+                .x(d => xScale(d.year))
+                .y(d => yScale(d.taxAmount))
+                .curve(d3.curveMonotoneX);
+
+            g.append('g')
+                .attr('class', 'axis')
+                .attr('transform', `translate(0,${height})`)
+                .call(d3.axisBottom(xScale).tickFormat(d3.format('d')));
+
+            g.append('g')
+                .attr('class', 'axis')
+                .call(d3.axisLeft(yScale).tickFormat(formatCurrency));
+
+            g.append('text')
+                .attr('x', width / 2)
+                .attr('y', height + 50)
+                .style('text-anchor', 'middle')
+                .text('Year');
+
+            g.append('text')
+                .attr('transform', 'rotate(-90)')
+                .attr('y', -60)
+                .attr('x', -height / 2)
+                .style('text-anchor', 'middle')
+                .text('Annual Tax ($)');
+
+            g.append('path')
+                .datum(data)
+                .attr('class', 'line tax-line')
+                .attr('d', line);
+
+            g.selectAll('.tax-dot')
+                .data(data)
+                .enter().append('circle')
+                .attr('class', 'dot tax-dot')
+                .attr('cx', d => xScale(d.year))
+                .attr('cy', d => yScale(d.taxAmount))
+                .on('mouseover', function(event, d) {
+                    tooltip.style('opacity', 1)
+                        .html(`Year: ${d.year}<br/>Annual Tax: ${formatCurrency(d.taxAmount)}`)
+                        .style('left', (event.pageX + 10) + 'px')
+                        .style('top', (event.pageY - 10) + 'px');
+                })
+                .on('mouseout', function() {
+                    tooltip.style('opacity', 0);
+                });
+        }
+
+        function createSqftChart(data) {
+            const svg = d3.select('#sqft-chart');
+            svg.selectAll("*").remove();
+            
+            const g = svg.append('g')
+                .attr('transform', `translate(${margin.left},${margin.top})`);
+
+            const xScale = d3.scaleLinear()
+                .domain(d3.extent(data, d => d.year))
+                .range([0, width]);
+
+            const yScale = d3.scaleLinear()
+                .domain([0, d3.max(data, d => d.valuePerSqft) * 1.1])
+                .range([height, 0]);
+
+            const line = d3.line()
+                .x(d => xScale(d.year))
+                .y(d => yScale(d.valuePerSqft))
+                .curve(d3.curveMonotoneX);
+
+            g.append('g')
+                .attr('class', 'axis')
+                .attr('transform', `translate(0,${height})`)
+                .call(d3.axisBottom(xScale).tickFormat(d3.format('d')));
+
+            g.append('g')
+                .attr('class', 'axis')
+                .call(d3.axisLeft(yScale).tickFormat(formatCurrencyDetailed));
+
+            g.append('text')
+                .attr('x', width / 2)
+                .attr('y', height + 50)
+                .style('text-anchor', 'middle')
+                .text('Year');
+
+            g.append('text')
+                .attr('transform', 'rotate(-90)')
+                .attr('y', -60)
+                .attr('x', -height / 2)
+                .style('text-anchor', 'middle')
+                .text('Value per Sq Ft ($)');
+
+            g.append('path')
+                .datum(data)
+                .attr('class', 'line sqft-line')
+                .attr('d', line);
+
+            g.selectAll('.sqft-dot')
+                .data(data)
+                .enter().append('circle')
+                .attr('class', 'dot sqft-dot')
+                .attr('cx', d => xScale(d.year))
+                .attr('cy', d => yScale(d.valuePerSqft))
+                .on('mouseover', function(event, d) {
+                    tooltip.style('opacity', 1)
+                        .html(`Year: ${d.year}<br/>Value per Sq Ft: ${formatCurrencyDetailed(d.valuePerSqft)}`)
+                        .style('left', (event.pageX + 10) + 'px')
+                        .style('top', (event.pageY - 10) + 'px');
+                })
+                .on('mouseout', function() {
+                    tooltip.style('opacity', 0);
+                });
+        }
+
+        function showLoading(show) {
+            document.getElementById('loading').style.display = show ? 'block' : 'none';
+        }
+
+        function showError(message) {
+            const errorDiv = document.getElementById('error');
+            errorDiv.textContent = message;
+            errorDiv.style.display = 'block';
+        }
+
+        function hideError() {
+            document.getElementById('error').style.display = 'none';
+        }
+
+        function showPropertyInfo(data) {
+            document.getElementById('property-address').textContent = data.address;
+            document.getElementById('property-details').textContent = 
+                `${data.total_assessments} assessment records spanning ${data.assessment_years[data.assessment_years.length-1]} - ${data.assessment_years[0]}`;
+            document.getElementById('property-info').style.display = 'block';
+        }
+
+        function showCharts() {
+            document.getElementById('assessment-chart-container').style.display = 'block';
+            document.getElementById('tax-chart-container').style.display = 'block';
+            document.getElementById('sqft-chart-container').style.display = 'block';
+        }
+
+        function hideCharts() {
+            document.getElementById('assessment-chart-container').style.display = 'none';
+            document.getElementById('tax-chart-container').style.display = 'none';
+            document.getElementById('sqft-chart-container').style.display = 'none';
+            document.getElementById('property-info').style.display = 'none';
+        }
+
+        // Load charts on page load - check for URL parameter first
+        window.addEventListener('load', function() {
+            // Check if address is passed in URL parameter
+            const urlParams = new URLSearchParams(window.location.search);
+            const addressParam = urlParams.get('address');
+            
+            if (addressParam) {
+                // Update input field with address from URL
+                document.getElementById('addressInput').value = addressParam;
+                console.log('Loading charts for address from URL:', addressParam);
+            }
+            
+            // Load charts (either default or from URL parameter)
+            loadCharts();
+        });
+    </script>
+</body>
+</html>
