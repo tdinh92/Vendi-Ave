@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python test_assessmenthistory.py:*)",
+      "Bash(python:*)",
+      "Bash(set:*)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}
