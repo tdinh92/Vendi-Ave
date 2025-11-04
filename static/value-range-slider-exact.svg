@@ -1,0 +1,291 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="880" height="720" viewBox="0 0 880 720" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <!-- Value Range Gradient - EXACT from HTML -->
+    <linearGradient id="rangeGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:#ef4444;stop-opacity:1" />
+      <stop offset="25%" style="stop-color:#f59e0b;stop-opacity:1" />
+      <stop offset="50%" style="stop-color:#10b981;stop-opacity:1" />
+      <stop offset="50%" style="stop-color:#10b981;stop-opacity:1" />
+      <stop offset="75%" style="stop-color:#f59e0b;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#ef4444;stop-opacity:1" />
+    </linearGradient>
+
+    <!-- Card Shadow: 0 4px 20px rgba(0, 0, 0, 0.08) -->
+    <filter id="cardShadow">
+      <feGaussianBlur in="SourceAlpha" stdDeviation="5"/>
+      <feOffset dx="0" dy="4" result="offsetblur"/>
+      <feFlood flood-color="#000000" flood-opacity="0.08"/>
+      <feComposite in2="offsetblur" operator="in"/>
+      <feMerge>
+        <feMergeNode/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+
+    <!-- Slider Shadow: 0 2px 8px rgba(0, 0, 0, 0.1) -->
+    <filter id="sliderShadow">
+      <feGaussianBlur in="SourceAlpha" stdDeviation="2"/>
+      <feOffset dx="0" dy="2" result="offsetblur"/>
+      <feFlood flood-color="#000000" flood-opacity="0.1"/>
+      <feComposite in2="offsetblur" operator="in"/>
+      <feMerge>
+        <feMergeNode/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+
+    <!-- Marker Shadow: 0 4px 12px rgba(0, 0, 0, 0.2) -->
+    <filter id="markerShadow">
+      <feGaussianBlur in="SourceAlpha" stdDeviation="3"/>
+      <feOffset dx="0" dy="4" result="offsetblur"/>
+      <feFlood flood-color="#000000" flood-opacity="0.2"/>
+      <feComposite in2="offsetblur" operator="in"/>
+      <feMerge>
+        <feMergeNode/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+
+  <!-- Body Background: #f8fafc with padding: 40px 20px -->
+  <rect width="880" height="720" fill="#f8fafc"/>
+
+  <!-- Container: max-width: 800px, margin: 0 auto -->
+  <g transform="translate(40, 40)">
+
+    <!-- Value Range Section Card: background: white, padding: 40px, border-radius: 16px, box-shadow -->
+    <rect x="0" y="0" width="800" height="640" rx="16" fill="#ffffff" filter="url(#cardShadow)"/>
+
+    <!-- Content inside card (padding: 40px) -->
+    <g transform="translate(40, 40)">
+
+      <!-- Section Title: font-size: 1.5rem (24px), color: #1e293b, margin-bottom: 30px, font-weight: 700, text-align: center -->
+      <text x="360" y="8"
+            font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif"
+            font-size="24"
+            font-weight="700"
+            fill="#1e293b"
+            text-anchor="middle">
+        Estimated Property Value Range
+      </text>
+
+      <!-- Most Likely Value Section: text-align: center, margin-bottom: 40px -->
+      <g transform="translate(0, 54)">
+        <!-- Value Label: font-size: 0.95rem (15.2px ≈ 15px), color: #64748b, margin-bottom: 10px, font-weight: 600, text-transform: uppercase, letter-spacing: 0.5px -->
+        <text x="360" y="0"
+              font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif"
+              font-size="15"
+              font-weight="600"
+              fill="#64748b"
+              text-anchor="middle"
+              letter-spacing="0.5">
+          MOST LIKELY VALUE (AVM)
+        </text>
+
+        <!-- Value Amount: font-size: 3rem (48px), font-weight: 800, color: #1e3a8a, line-height: 1 -->
+        <text x="360" y="35"
+              font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif"
+              font-size="48"
+              font-weight="800"
+              fill="#1e3a8a"
+              text-anchor="middle">
+          $1,327,564
+        </text>
+      </g>
+
+      <!-- Range Slider Container: position: relative, padding: 40px 20px -->
+      <g transform="translate(20, 179)">
+
+        <!-- Range Slider: height: 12px, background: linear-gradient, border-radius: 6px, box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1) -->
+        <rect x="0" y="0" width="680" height="12" rx="6"
+              fill="url(#rangeGradient)"
+              filter="url(#sliderShadow)"/>
+
+        <!-- Range Marker: position: absolute, top: 50%, transform: translate(-50%, -50%), width: 24px, height: 24px, background: white, border: 4px solid #1e3a8a, border-radius: 50%, box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2) -->
+        <!-- Positioned at 50% = 340px -->
+        <g transform="translate(340, 6)">
+          <!-- Arrow (::after): top: -30px -->
+          <polygon points="0,-30 -6,-22 6,-22" fill="#1e3a8a"/>
+
+          <!-- Marker Circle -->
+          <circle cx="0" cy="0" r="12"
+                  fill="#ffffff"
+                  stroke="#1e3a8a"
+                  stroke-width="4"
+                  filter="url(#markerShadow)"/>
+        </g>
+
+        <!-- Range Labels: display: flex, justify-content: space-between, margin-top: 25px, gap: 20px -->
+        <g transform="translate(0, 37)">
+
+          <!-- Low Estimate (Left): text-align: center, flex: 1 -->
+          <g transform="translate(0, 0)">
+            <!-- Title: font-size: 0.85rem (13.6px ≈ 14px), color: #64748b, margin-bottom: 8px, font-weight: 600, text-transform: uppercase, letter-spacing: 0.5px -->
+            <text x="0" y="0"
+                  font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif"
+                  font-size="14"
+                  font-weight="600"
+                  fill="#64748b"
+                  text-anchor="start"
+                  letter-spacing="0.5">
+              LOW ESTIMATE
+            </text>
+
+            <!-- Value: font-size: 1.3rem (20.8px ≈ 21px), font-weight: 700, color: #1e293b -->
+            <text x="0" y="28"
+                  font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif"
+                  font-size="21"
+                  font-weight="700"
+                  fill="#1e293b"
+                  text-anchor="start">
+              $1,261,185
+            </text>
+          </g>
+
+          <!-- High Estimate (Right) -->
+          <g transform="translate(680, 0)">
+            <text x="0" y="0"
+                  font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif"
+                  font-size="14"
+                  font-weight="600"
+                  fill="#64748b"
+                  text-anchor="end"
+                  letter-spacing="0.5">
+              HIGH ESTIMATE
+            </text>
+
+            <text x="0" y="28"
+                  font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif"
+                  font-size="21"
+                  font-weight="700"
+                  fill="#1e293b"
+                  text-anchor="end">
+              $1,393,942
+            </text>
+          </g>
+
+        </g>
+      </g>
+
+      <!-- Metrics Container: display: grid, grid-template-columns: 1fr 1fr, gap: 20px, margin-top: 30px -->
+      <!-- Position after slider (179 + 40 slider padding + 12 slider height + 37 label margin + 28 label height = 296 + 30 margin = 326) -->
+      <g transform="translate(0, 326)">
+
+        <!-- FSD Card (Left): background: #f8fafc, padding: 25px, border-radius: 12px, border: 2px solid #e2e8f0, text-align: center -->
+        <g>
+          <rect x="0" y="0" width="350" height="130" rx="12"
+                fill="#f8fafc"
+                stroke="#e2e8f0"
+                stroke-width="2"/>
+
+          <!-- Metric Value: font-size: 2rem (32px), font-weight: 800, color: #1e3a8a, margin-bottom: 8px -->
+          <text x="175" y="45"
+                font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif"
+                font-size="32"
+                font-weight="800"
+                fill="#1e3a8a"
+                text-anchor="middle">
+            5.0%
+          </text>
+
+          <!-- Metric Label: font-size: 0.95rem (15px), color: #64748b, font-weight: 600 -->
+          <text x="175" y="75"
+                font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif"
+                font-size="15"
+                font-weight="600"
+                fill="#64748b"
+                text-anchor="middle">
+            FSD
+          </text>
+
+          <!-- Metric Description: font-size: 0.8rem (12.8px ≈ 13px), color: #94a3b8, margin-top: 8px, font-style: italic -->
+          <text x="175" y="98"
+                font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif"
+                font-size="13"
+                font-weight="400"
+                fill="#94a3b8"
+                text-anchor="middle"
+                font-style="italic">
+            Forecast Standard Deviation
+          </text>
+        </g>
+
+        <!-- Value Range Card (Right): translate by 350 + 20 gap = 370 -->
+        <g transform="translate(370, 0)">
+          <rect x="0" y="0" width="350" height="130" rx="12"
+                fill="#f8fafc"
+                stroke="#e2e8f0"
+                stroke-width="2"/>
+
+          <text x="175" y="45"
+                font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif"
+                font-size="32"
+                font-weight="800"
+                fill="#1e3a8a"
+                text-anchor="middle">
+            $132,757
+          </text>
+
+          <text x="175" y="75"
+                font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif"
+                font-size="15"
+                font-weight="600"
+                fill="#64748b"
+                text-anchor="middle">
+            Value Range
+          </text>
+
+          <text x="175" y="98"
+                font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif"
+                font-size="13"
+                font-weight="400"
+                fill="#94a3b8"
+                text-anchor="middle"
+                font-style="italic">
+            High - Low Difference
+          </text>
+        </g>
+
+      </g>
+
+      <!-- Info Box: background: #eff6ff, padding: 20px, border-radius: 12px, border-left: 4px solid #3b82f6, margin-top: 30px -->
+      <!-- Position: 326 + 130 (metrics height) + 30 margin = 486 -->
+      <g transform="translate(0, 486)">
+        <rect x="0" y="0" width="720" height="84" rx="12" fill="#eff6ff"/>
+        <rect x="0" y="0" width="4" height="84" rx="2" fill="#3b82f6"/>
+
+        <!-- Title: color: #1e40af, font-size: 1.1rem (17.6px ≈ 18px), margin-bottom: 10px, font-weight: 600 -->
+        <text x="20" y="28"
+              font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif"
+              font-size="18"
+              font-weight="600"
+              fill="#1e40af"
+              text-anchor="start">
+          Understanding the Value Range
+        </text>
+
+        <!-- Description: color: #1e40af, font-size: 0.95rem (15px), line-height: 1.6 -->
+        <text x="20" y="50"
+              font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif"
+              font-size="15"
+              font-weight="400"
+              fill="#1e40af"
+              text-anchor="start">
+          The AVM provides a most likely value along with a confidence range. The gradient shows
+        </text>
+
+        <text x="20" y="68"
+              font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif"
+              font-size="15"
+              font-weight="400"
+              fill="#1e40af"
+              text-anchor="start">
+          how the property value compares - green is optimal, red/yellow suggests extremes.
+        </text>
+      </g>
+
+    </g>
+
+  </g>
+</svg>

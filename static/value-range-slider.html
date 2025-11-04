@@ -1,0 +1,462 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Property Value Range Slider</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: #f8fafc;
+            padding: 40px 20px;
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+
+        /* Value Range Section */
+        .value-range-section {
+            background: white;
+            padding: 40px;
+            border-radius: 16px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+        }
+
+        .section-title {
+            font-size: 1.5rem;
+            color: #1e293b;
+            margin-bottom: 30px;
+            font-weight: 700;
+            text-align: center;
+        }
+
+        .most-likely-value {
+            text-align: center;
+            margin-bottom: 40px;
+        }
+
+        .value-label {
+            font-size: 0.95rem;
+            color: #64748b;
+            margin-bottom: 10px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .value-amount {
+            font-size: 3rem;
+            font-weight: 800;
+            color: #1e3a8a;
+            line-height: 1;
+        }
+
+        .range-slider-container {
+            position: relative;
+            padding: 40px 20px;
+        }
+
+        .range-slider {
+            position: relative;
+            height: 12px;
+            background: linear-gradient(90deg,
+                #ef4444 0%,
+                #f59e0b 25%,
+                #10b981 50%,
+                #10b981 50%,
+                #f59e0b 75%,
+                #ef4444 100%
+            );
+            border-radius: 6px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        .range-marker {
+            position: absolute;
+            top: 50%;
+            transform: translate(-50%, -50%);
+            width: 24px;
+            height: 24px;
+            background: white;
+            border: 4px solid #1e3a8a;
+            border-radius: 50%;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+            z-index: 10;
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+
+        .range-marker:hover {
+            transform: translate(-50%, -50%) scale(1.2);
+        }
+
+        .range-marker::after {
+            content: '';
+            position: absolute;
+            top: -30px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 0;
+            height: 0;
+            border-left: 6px solid transparent;
+            border-right: 6px solid transparent;
+            border-top: 8px solid #1e3a8a;
+        }
+
+        .range-labels {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 25px;
+            gap: 20px;
+        }
+
+        .range-label {
+            text-align: center;
+            flex: 1;
+        }
+
+        .range-label-title {
+            font-size: 0.85rem;
+            color: #64748b;
+            margin-bottom: 8px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .range-label-value {
+            font-size: 1.3rem;
+            font-weight: 700;
+            color: #1e293b;
+        }
+
+        /* FSD and Metrics */
+        .metrics-container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin-top: 30px;
+        }
+
+        .metric-card {
+            background: #f8fafc;
+            padding: 25px;
+            border-radius: 12px;
+            border: 2px solid #e2e8f0;
+            text-align: center;
+            transition: all 0.3s ease;
+        }
+
+        .metric-card:hover {
+            border-color: #3b82f6;
+            box-shadow: 0 4px 12px rgba(59, 130, 246, 0.1);
+        }
+
+        .metric-value {
+            font-size: 2rem;
+            font-weight: 800;
+            color: #1e3a8a;
+            margin-bottom: 8px;
+        }
+
+        .metric-label {
+            font-size: 0.95rem;
+            color: #64748b;
+            font-weight: 600;
+        }
+
+        .metric-description {
+            font-size: 0.8rem;
+            color: #94a3b8;
+            margin-top: 8px;
+            font-style: italic;
+        }
+
+        /* Controls */
+        .controls {
+            background: #f8fafc;
+            padding: 30px;
+            border-radius: 12px;
+            margin-top: 30px;
+            border: 2px solid #e2e8f0;
+        }
+
+        .controls-title {
+            font-size: 1.2rem;
+            color: #1e293b;
+            margin-bottom: 20px;
+            font-weight: 700;
+        }
+
+        .input-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+
+        .input-group label {
+            display: block;
+            font-weight: 600;
+            color: #1e293b;
+            margin-bottom: 8px;
+            font-size: 0.9rem;
+        }
+
+        .input-group input {
+            width: 100%;
+            padding: 12px 16px;
+            border: 2px solid #e2e8f0;
+            border-radius: 8px;
+            font-size: 1rem;
+            transition: all 0.3s ease;
+        }
+
+        .input-group input:focus {
+            outline: none;
+            border-color: #3b82f6;
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+        }
+
+        .btn {
+            width: 100%;
+            padding: 14px 24px;
+            background: linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(59, 130, 246, 0.3);
+        }
+
+        .btn:active {
+            transform: translateY(0);
+        }
+
+        /* Info Box */
+        .info-box {
+            background: #eff6ff;
+            padding: 20px;
+            border-radius: 12px;
+            border-left: 4px solid #3b82f6;
+            margin-top: 30px;
+        }
+
+        .info-box h3 {
+            color: #1e40af;
+            font-size: 1.1rem;
+            margin-bottom: 10px;
+            font-weight: 600;
+        }
+
+        .info-box p {
+            color: #1e40af;
+            font-size: 0.95rem;
+            line-height: 1.6;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .value-amount {
+                font-size: 2.2rem;
+            }
+
+            .metrics-container {
+                grid-template-columns: 1fr;
+            }
+
+            .range-labels {
+                flex-direction: column;
+                gap: 15px;
+            }
+
+            .input-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="value-range-section">
+            <h3 class="section-title">Estimated Property Value Range</h3>
+
+            <!-- Most Likely Value -->
+            <div class="most-likely-value">
+                <div class="value-label">Most Likely Value (AVM)</div>
+                <div class="value-amount" id="mostLikelyValue">$1,327,564</div>
+            </div>
+
+            <!-- Range Slider -->
+            <div class="range-slider-container">
+                <div class="range-slider">
+                    <div class="range-marker" id="rangeMarker"></div>
+                </div>
+
+                <div class="range-labels">
+                    <div class="range-label">
+                        <div class="range-label-title">Low Estimate</div>
+                        <div class="range-label-value" id="lowValue">$1,261,185</div>
+                    </div>
+                    <div class="range-label">
+                        <div class="range-label-title">High Estimate</div>
+                        <div class="range-label-value" id="highValue">$1,393,942</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Metrics -->
+            <div class="metrics-container">
+                <div class="metric-card">
+                    <div class="metric-value" id="fsdValue">5.0%</div>
+                    <div class="metric-label">FSD</div>
+                    <div class="metric-description">Forecast Standard Deviation</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-value" id="valueRange">$132,757</div>
+                    <div class="metric-label">Value Range</div>
+                    <div class="metric-description">High - Low Difference</div>
+                </div>
+            </div>
+
+            <div class="info-box">
+                <h3>Understanding the Value Range</h3>
+                <p>The AVM provides a most likely value along with a confidence range. The gradient shows how the property value compares within this range - green indicates optimal positioning, while red/yellow suggests values at the extremes of the estimate.</p>
+            </div>
+        </div>
+
+        <!-- Controls -->
+        <div class="controls">
+            <h3 class="controls-title">Update Values (Demo)</h3>
+
+            <div class="input-grid">
+                <div class="input-group">
+                    <label for="inputAvmValue">AVM Value ($)</label>
+                    <input type="number" id="inputAvmValue" value="1327564" placeholder="1327564">
+                </div>
+
+                <div class="input-group">
+                    <label for="inputLowValue">Low Estimate ($)</label>
+                    <input type="number" id="inputLowValue" value="1261185" placeholder="1261185">
+                </div>
+
+                <div class="input-group">
+                    <label for="inputHighValue">High Estimate ($)</label>
+                    <input type="number" id="inputHighValue" value="1393942" placeholder="1393942">
+                </div>
+
+                <div class="input-group">
+                    <label for="inputFsd">FSD (%)</label>
+                    <input type="number" id="inputFsd" step="0.1" value="5.0" placeholder="5.0">
+                </div>
+            </div>
+
+            <button class="btn" onclick="updateVisualization()">Update Visualization</button>
+        </div>
+    </div>
+
+    <script>
+        // Format currency
+        function formatCurrency(value) {
+            return new Intl.NumberFormat('en-US', {
+                style: 'currency',
+                currency: 'USD',
+                minimumFractionDigits: 0,
+                maximumFractionDigits: 0
+            }).format(value);
+        }
+
+        // Update value range slider
+        function updateValueRange(lowValue, avmValue, highValue) {
+            const range = highValue - lowValue;
+            const position = ((avmValue - lowValue) / range) * 100;
+
+            document.getElementById('rangeMarker').style.left = position + '%';
+            document.getElementById('mostLikelyValue').textContent = formatCurrency(avmValue);
+            document.getElementById('lowValue').textContent = formatCurrency(lowValue);
+            document.getElementById('highValue').textContent = formatCurrency(highValue);
+            document.getElementById('valueRange').textContent = formatCurrency(range);
+        }
+
+        // Update entire visualization
+        function updateVisualization() {
+            const avmValue = parseFloat(document.getElementById('inputAvmValue').value);
+            const lowValue = parseFloat(document.getElementById('inputLowValue').value);
+            const highValue = parseFloat(document.getElementById('inputHighValue').value);
+            const fsd = parseFloat(document.getElementById('inputFsd').value);
+
+            // Validate inputs
+            if (isNaN(avmValue) || isNaN(lowValue) || isNaN(highValue)) {
+                alert('Please enter valid numbers for all fields');
+                return;
+            }
+
+            if (lowValue >= avmValue || avmValue >= highValue) {
+                alert('Values must be in order: Low < AVM < High');
+                return;
+            }
+
+            // Update visualizations
+            updateValueRange(lowValue, avmValue, highValue);
+            document.getElementById('fsdValue').textContent = fsd.toFixed(1) + '%';
+        }
+
+        // Initialize with default values on page load
+        window.addEventListener('DOMContentLoaded', function() {
+            updateVisualization();
+        });
+
+        // API Integration Function
+        async function loadFromAPI(address) {
+            try {
+                const response = await fetch('http://localhost:5000/property/raw/avm', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ address: address })
+                });
+
+                const data = await response.json();
+
+                // Extract AVM data
+                const avm = data.property?.[0]?.avm;
+                if (avm && avm.amount?.value) {
+                    const avmData = avm.amount.value;
+
+                    document.getElementById('inputAvmValue').value = avmData.value || 0;
+                    document.getElementById('inputLowValue').value = avmData.valueLow || 0;
+                    document.getElementById('inputHighValue').value = avmData.valueHigh || 0;
+                    document.getElementById('inputFsd').value = avmData.fsd || 5.0;
+
+                    updateVisualization();
+                } else {
+                    alert('No AVM data found for this address');
+                }
+            } catch (error) {
+                console.error('Error loading AVM data:', error);
+                alert('Failed to load data from API');
+            }
+        }
+
+        // Example: Uncomment to test with real API
+        // loadFromAPI('4 Fiorenza Drive, Wilmington, MA 01887');
+    </script>
+</body>
+</html>

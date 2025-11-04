@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Real Estate Commission Calculator</title>
+    <link rel="stylesheet" href="calculator.css">
+</head>
+<body>
+    <div class="calculator-container">
+        <div class="calculator-header">
+            <h1>Home Sale Proceeds Calculator</h1>
+            <p class="subtitle">See what you'll actually take home after selling your property</p>
+        </div>
+
+        <div class="calculator-content">
+            <div class="input-section">
+                <div class="input-group">
+                    <label for="salePrice">Home Sale Price</label>
+                    <div class="input-wrapper">
+                        <span class="currency-symbol">$</span>
+                        <input type="text" id="salePrice" placeholder="500,000" value="500000">
+                    </div>
+                </div>
+
+                <div class="input-group">
+                    <label for="commissionRate">Real Estate Agent Commission</label>
+                    <div class="slider-wrapper">
+                        <input type="range" id="commissionRate" min="1" max="10" step="0.1" value="6">
+                        <span class="slider-value"><span id="commissionDisplay">6.0</span>%</span>
+                    </div>
+                    <p class="helper-text">Typical agent commission is 5-6% of sale price</p>
+                </div>
+
+                <div class="input-group">
+                    <label for="mortgageBalance">Remaining Mortgage Balance</label>
+                    <div class="input-wrapper">
+                        <span class="currency-symbol">$</span>
+                        <input type="text" id="mortgageBalance" placeholder="300,000" value="300000">
+                    </div>
+                </div>
+
+                <div class="input-group">
+                    <label for="closingCosts">Estimated Closing Costs</label>
+                    <div class="input-wrapper">
+                        <span class="currency-symbol">$</span>
+                        <input type="text" id="closingCosts" placeholder="5,000" value="5000">
+                    </div>
+                    <p class="helper-text">Typical closing costs: $3,000 - $8,000</p>
+                </div>
+
+                <div class="input-group">
+                    <label for="otherFees">Other Fees (Optional)</label>
+                    <div class="input-wrapper">
+                        <span class="currency-symbol">$</span>
+                        <input type="text" id="otherFees" placeholder="0" value="0">
+                    </div>
+                    <p class="helper-text">Home warranty, repairs, staging, etc.</p>
+                </div>
+            </div>
+
+            <div class="results-section">
+                <h2>Your Net Proceeds Breakdown</h2>
+
+                <div class="result-item gross-sale">
+                    <span class="label">Gross Sale Price</span>
+                    <span class="value" id="grossSale">$500,000</span>
+                </div>
+
+                <div class="deductions-container">
+                    <h3>Deductions:</h3>
+
+                    <div class="result-item agent-commission-highlight">
+                        <div class="commission-header">
+                            <span class="label">
+                                <strong>Real Estate Agent Commission</strong>
+                                <span class="commission-percentage" id="commissionPercentage">(6.0%)</span>
+                            </span>
+                            <span class="value negative" id="agentCommission">-$30,000</span>
+                        </div>
+                        <div class="commission-warning">
+                            💡 This is what goes to your agent(s) - not to you!
+                        </div>
+                    </div>
+
+                    <div class="result-item">
+                        <span class="label">Mortgage Payoff</span>
+                        <span class="value negative" id="mortgagePayoff">-$300,000</span>
+                    </div>
+
+                    <div class="result-item">
+                        <span class="label">Closing Costs</span>
+                        <span class="value negative" id="closingCostsDisplay">-$5,000</span>
+                    </div>
+
+                    <div class="result-item" id="otherFeesRow">
+                        <span class="label">Other Fees</span>
+                        <span class="value negative" id="otherFeesDisplay">$0</span>
+                    </div>
+                </div>
+
+                <div class="result-item net-proceeds">
+                    <span class="label">Your Net Proceeds</span>
+                    <span class="value" id="netProceeds">$165,000</span>
+                </div>
+
+                <div class="visual-breakdown">
+                    <h3>Where Your Money Goes:</h3>
+                    <div class="breakdown-bar">
+                        <div class="bar-segment agent-segment" id="agentBar">
+                            <span class="bar-label">Agent</span>
+                            <span class="bar-percentage" id="agentPercent">6%</span>
+                        </div>
+                        <div class="bar-segment mortgage-segment" id="mortgageBar">
+                            <span class="bar-label">Mortgage</span>
+                            <span class="bar-percentage" id="mortgagePercent">60%</span>
+                        </div>
+                        <div class="bar-segment costs-segment" id="costsBar">
+                            <span class="bar-label">Costs</span>
+                            <span class="bar-percentage" id="costsPercent">1%</span>
+                        </div>
+                        <div class="bar-segment proceeds-segment" id="proceedsBar">
+                            <span class="bar-label">You Keep</span>
+                            <span class="bar-percentage" id="proceedsPercent">33%</span>
+                        </div>
+                    </div>
+                    <div class="breakdown-legend">
+                        <div class="legend-item">
+                            <span class="legend-color agent-color"></span>
+                            <span>Agent Commission</span>
+                        </div>
+                        <div class="legend-item">
+                            <span class="legend-color mortgage-color"></span>
+                            <span>Mortgage Payoff</span>
+                        </div>
+                        <div class="legend-item">
+                            <span class="legend-color costs-color"></span>
+                            <span>Fees & Costs</span>
+                        </div>
+                        <div class="legend-item">
+                            <span class="legend-color proceeds-color"></span>
+                            <span>Your Net Proceeds</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="calculator.js"></script>
+</body>
+</html>

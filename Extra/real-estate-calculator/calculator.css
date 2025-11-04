@@ -1,0 +1,459 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    min-height: 100vh;
+    padding: 20px;
+    line-height: 1.6;
+}
+
+.calculator-container {
+    max-width: 1200px;
+    margin: 0 auto;
+    background: white;
+    border-radius: 20px;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+    overflow: hidden;
+}
+
+.calculator-header {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    padding: 40px 30px;
+    text-align: center;
+}
+
+.calculator-header h1 {
+    font-size: 2.5rem;
+    margin-bottom: 10px;
+    font-weight: 700;
+}
+
+.subtitle {
+    font-size: 1.1rem;
+    opacity: 0.95;
+}
+
+.calculator-content {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 40px;
+    padding: 40px;
+}
+
+/* Input Section */
+.input-section {
+    display: flex;
+    flex-direction: column;
+    gap: 25px;
+}
+
+.input-group {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.input-group label {
+    font-weight: 600;
+    color: #2d3748;
+    font-size: 0.95rem;
+}
+
+.input-wrapper {
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+
+.currency-symbol {
+    position: absolute;
+    left: 15px;
+    font-size: 1.2rem;
+    color: #718096;
+    font-weight: 600;
+}
+
+.input-wrapper input[type="text"] {
+    width: 100%;
+    padding: 15px 15px 15px 35px;
+    border: 2px solid #e2e8f0;
+    border-radius: 10px;
+    font-size: 1.1rem;
+    transition: all 0.3s ease;
+    font-weight: 500;
+}
+
+.input-wrapper input[type="text"]:focus {
+    outline: none;
+    border-color: #667eea;
+    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+.slider-wrapper {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+}
+
+input[type="range"] {
+    flex: 1;
+    height: 8px;
+    border-radius: 5px;
+    background: #e2e8f0;
+    outline: none;
+    -webkit-appearance: none;
+}
+
+input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    background: #dc2626;
+    cursor: pointer;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+    transition: all 0.3s ease;
+}
+
+input[type="range"]::-webkit-slider-thumb:hover {
+    transform: scale(1.1);
+    box-shadow: 0 3px 8px rgba(220, 38, 38, 0.4);
+}
+
+input[type="range"]::-moz-range-thumb {
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    background: #dc2626;
+    cursor: pointer;
+    border: none;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+}
+
+.slider-value {
+    font-size: 1.3rem;
+    font-weight: 700;
+    color: #dc2626;
+    min-width: 60px;
+    text-align: right;
+}
+
+.helper-text {
+    font-size: 0.85rem;
+    color: #718096;
+    font-style: italic;
+}
+
+/* Results Section */
+.results-section {
+    background: #f7fafc;
+    padding: 30px;
+    border-radius: 15px;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.results-section h2 {
+    color: #2d3748;
+    font-size: 1.8rem;
+    margin-bottom: 10px;
+}
+
+.results-section h3 {
+    color: #4a5568;
+    font-size: 1.2rem;
+    margin-bottom: 10px;
+}
+
+.result-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 15px 20px;
+    background: white;
+    border-radius: 10px;
+    border: 2px solid #e2e8f0;
+}
+
+.result-item .label {
+    font-weight: 500;
+    color: #4a5568;
+    font-size: 1rem;
+}
+
+.result-item .value {
+    font-size: 1.3rem;
+    font-weight: 700;
+    color: #2d3748;
+}
+
+.result-item .value.negative {
+    color: #dc2626;
+}
+
+/* Gross Sale Highlight */
+.gross-sale {
+    border-color: #3b82f6;
+    background: #eff6ff;
+}
+
+.gross-sale .value {
+    color: #3b82f6;
+    font-size: 1.5rem;
+}
+
+/* Agent Commission Highlight - THE MAIN EMPHASIS */
+.agent-commission-highlight {
+    border: 3px solid #dc2626;
+    background: #fef2f2;
+    padding: 20px;
+    box-shadow: 0 4px 12px rgba(220, 38, 38, 0.15);
+    position: relative;
+    overflow: hidden;
+}
+
+.agent-commission-highlight::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 5px;
+    background: linear-gradient(90deg, #dc2626, #b91c1c);
+}
+
+.commission-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    width: 100%;
+}
+
+.commission-header .label {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
+
+.commission-header .label strong {
+    font-size: 1.1rem;
+    color: #991b1b;
+}
+
+.commission-percentage {
+    font-size: 0.9rem;
+    color: #dc2626;
+    font-weight: 600;
+}
+
+.commission-header .value {
+    font-size: 1.8rem;
+    color: #dc2626;
+    font-weight: 800;
+}
+
+.commission-warning {
+    margin-top: 10px;
+    padding: 10px 15px;
+    background: #fee2e2;
+    border-left: 4px solid #dc2626;
+    border-radius: 5px;
+    font-size: 0.95rem;
+    color: #991b1b;
+    font-weight: 500;
+}
+
+/* Deductions Container */
+.deductions-container {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+/* Net Proceeds Highlight */
+.net-proceeds {
+    border: 3px solid #10b981;
+    background: linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%);
+    padding: 20px;
+    margin-top: 10px;
+    box-shadow: 0 4px 12px rgba(16, 185, 129, 0.15);
+}
+
+.net-proceeds .label {
+    font-size: 1.2rem;
+    font-weight: 700;
+    color: #047857;
+}
+
+.net-proceeds .value {
+    font-size: 2rem;
+    font-weight: 800;
+    color: #10b981;
+}
+
+/* Visual Breakdown */
+.visual-breakdown {
+    margin-top: 20px;
+    padding: 20px;
+    background: white;
+    border-radius: 10px;
+    border: 2px solid #e2e8f0;
+}
+
+.breakdown-bar {
+    width: 100%;
+    height: 60px;
+    display: flex;
+    border-radius: 10px;
+    overflow: hidden;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    margin: 20px 0;
+}
+
+.bar-segment {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    transition: all 0.3s ease;
+}
+
+.bar-segment:hover {
+    transform: scaleY(1.05);
+    filter: brightness(1.1);
+}
+
+.agent-segment {
+    background: linear-gradient(135deg, #dc2626, #b91c1c);
+    color: white;
+}
+
+.mortgage-segment {
+    background: linear-gradient(135deg, #f59e0b, #d97706);
+    color: white;
+}
+
+.costs-segment {
+    background: linear-gradient(135deg, #6b7280, #4b5563);
+    color: white;
+}
+
+.proceeds-segment {
+    background: linear-gradient(135deg, #10b981, #059669);
+    color: white;
+}
+
+.bar-label {
+    font-size: 0.8rem;
+    font-weight: 600;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+}
+
+.bar-percentage {
+    font-size: 1.1rem;
+    font-weight: 700;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+}
+
+/* Breakdown Legend */
+.breakdown-legend {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    margin-top: 15px;
+}
+
+.legend-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 0.9rem;
+    color: #4a5568;
+}
+
+.legend-color {
+    width: 20px;
+    height: 20px;
+    border-radius: 4px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.agent-color {
+    background: linear-gradient(135deg, #dc2626, #b91c1c);
+}
+
+.mortgage-color {
+    background: linear-gradient(135deg, #f59e0b, #d97706);
+}
+
+.costs-color {
+    background: linear-gradient(135deg, #6b7280, #4b5563);
+}
+
+.proceeds-color {
+    background: linear-gradient(135deg, #10b981, #059669);
+}
+
+/* Responsive Design */
+@media (max-width: 968px) {
+    .calculator-content {
+        grid-template-columns: 1fr;
+        gap: 30px;
+    }
+
+    .calculator-header h1 {
+        font-size: 2rem;
+    }
+
+    .breakdown-legend {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 640px) {
+    body {
+        padding: 10px;
+    }
+
+    .calculator-header {
+        padding: 30px 20px;
+    }
+
+    .calculator-header h1 {
+        font-size: 1.5rem;
+    }
+
+    .subtitle {
+        font-size: 0.95rem;
+    }
+
+    .calculator-content {
+        padding: 20px;
+    }
+
+    .results-section {
+        padding: 20px;
+    }
+
+    .bar-label {
+        font-size: 0.65rem;
+    }
+
+    .bar-percentage {
+        font-size: 0.85rem;
+    }
+}
+
+/* Hide other fees row if value is 0 */
+#otherFeesRow.hidden {
+    display: none;
+}
