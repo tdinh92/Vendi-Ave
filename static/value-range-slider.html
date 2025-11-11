@@ -324,20 +324,20 @@
             <!-- Metrics -->
             <div class="metrics-container">
                 <div class="metric-card">
-                    <div class="metric-value" id="fsdValue">5.0%</div>
-                    <div class="metric-label">FSD</div>
-                    <div class="metric-description">Forecast Standard Deviation</div>
+                    <div class="metric-value" id="confidenceValue">95%</div>
+                    <div class="metric-label">Confidence Score</div>
+                    <div class="metric-description">How accurate this estimate is</div>
                 </div>
                 <div class="metric-card">
                     <div class="metric-value" id="valueRange">$132,757</div>
-                    <div class="metric-label">Value Range</div>
-                    <div class="metric-description">High - Low Difference</div>
+                    <div class="metric-label">Price Range</div>
+                    <div class="metric-description">Possible high-low difference</div>
                 </div>
             </div>
 
             <div class="info-box">
-                <h3>Understanding the Value Range</h3>
-                <p>The AVM provides a most likely value along with a confidence range. The gradient shows how the property value compares within this range - green indicates optimal positioning, while red/yellow suggests values at the extremes of the estimate.</p>
+                <h3>What This Means For You</h3>
+                <p>This is an automated estimate of your home's value. The confidence score shows how reliable this estimate is (higher is better). Your actual selling price may fall anywhere in the range shown, with the middle value being most likely.</p>
             </div>
         </div>
 
@@ -362,8 +362,8 @@
                 </div>
 
                 <div class="input-group">
-                    <label for="inputFsd">FSD (%)</label>
-                    <input type="number" id="inputFsd" step="0.1" value="5.0" placeholder="5.0">
+                    <label for="inputConfidence">Confidence Score (%)</label>
+                    <input type="number" id="inputConfidence" min="0" max="100" value="95" placeholder="95">
                 </div>
             </div>
 
@@ -399,7 +399,7 @@
             const avmValue = parseFloat(document.getElementById('inputAvmValue').value);
             const lowValue = parseFloat(document.getElementById('inputLowValue').value);
             const highValue = parseFloat(document.getElementById('inputHighValue').value);
-            const fsd = parseFloat(document.getElementById('inputFsd').value);
+            const confidence = parseFloat(document.getElementById('inputConfidence').value);
 
             // Validate inputs
             if (isNaN(avmValue) || isNaN(lowValue) || isNaN(highValue)) {
@@ -414,7 +414,7 @@
 
             // Update visualizations
             updateValueRange(lowValue, avmValue, highValue);
-            document.getElementById('fsdValue').textContent = fsd.toFixed(1) + '%';
+            document.getElementById('confidenceValue').textContent = Math.round(confidence) + '%';
         }
 
         // Initialize with default values on page load
@@ -443,7 +443,7 @@
                     document.getElementById('inputAvmValue').value = avmData.value || 0;
                     document.getElementById('inputLowValue').value = avmData.valueLow || 0;
                     document.getElementById('inputHighValue').value = avmData.valueHigh || 0;
-                    document.getElementById('inputFsd').value = avmData.fsd || 5.0;
+                    document.getElementById('inputConfidence').value = avmData.confidence || 95;
 
                     updateVisualization();
                 } else {

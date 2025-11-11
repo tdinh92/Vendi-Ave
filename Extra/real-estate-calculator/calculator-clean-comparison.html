@@ -1,0 +1,752 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Home Sale Calculator - Agent Cost Comparison</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: #f8fafc;
+            min-height: 100vh;
+            padding: 40px 20px;
+            line-height: 1.6;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+        }
+
+        .calculator-container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+        }
+
+        .calculator-header {
+            background: linear-gradient(135deg, #1e293b 0%, #334155 100%);
+            color: white;
+            padding: 50px 40px;
+            text-align: center;
+        }
+
+        .calculator-header h1 {
+            font-size: 2.8rem;
+            margin-bottom: 15px;
+            font-weight: 800;
+            letter-spacing: -0.02em;
+        }
+
+        .subtitle {
+            font-size: 1.2rem;
+            opacity: 0.9;
+            font-weight: 500;
+            letter-spacing: -0.01em;
+        }
+
+        .calculator-content {
+            display: grid;
+            grid-template-columns: 380px 1fr;
+            gap: 0;
+        }
+
+        .input-section {
+            background: #f8fafc;
+            padding: 40px;
+            display: flex;
+            flex-direction: column;
+            gap: 28px;
+            border-right: 1px solid #e2e8f0;
+        }
+
+        .input-section h2 {
+            font-size: 1.4rem;
+            color: #1e293b;
+            margin-bottom: 5px;
+            font-weight: 700;
+            letter-spacing: -0.01em;
+        }
+
+        .input-group {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .input-group label {
+            font-weight: 600;
+            color: #334155;
+            font-size: 0.95rem;
+            letter-spacing: -0.01em;
+        }
+
+        .input-wrapper {
+            position: relative;
+            display: flex;
+            align-items: center;
+        }
+
+        .currency-symbol {
+            position: absolute;
+            left: 16px;
+            font-size: 1.1rem;
+            color: #64748b;
+            font-weight: 600;
+        }
+
+        .input-wrapper input[type="text"] {
+            width: 100%;
+            padding: 14px 16px 14px 38px;
+            border: 2px solid #cbd5e1;
+            border-radius: 8px;
+            font-size: 1.1rem;
+            transition: all 0.2s ease;
+            font-weight: 500;
+            background: white;
+        }
+
+        .input-wrapper input[type="text"]:focus {
+            outline: none;
+            border-color: #3b82f6;
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+        }
+
+        .slider-wrapper {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        input[type="range"] {
+            flex: 1;
+            height: 8px;
+            border-radius: 4px;
+            background: #e2e8f0;
+            outline: none;
+            -webkit-appearance: none;
+        }
+
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            background: #dc2626;
+            cursor: pointer;
+            box-shadow: 0 2px 8px rgba(220, 38, 38, 0.3);
+            transition: all 0.2s ease;
+        }
+
+        input[type="range"]::-webkit-slider-thumb:hover {
+            transform: scale(1.1);
+        }
+
+        input[type="range"]::-moz-range-thumb {
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            background: #dc2626;
+            cursor: pointer;
+            border: none;
+            box-shadow: 0 2px 8px rgba(220, 38, 38, 0.3);
+        }
+
+        .slider-value {
+            font-size: 1.3rem;
+            font-weight: 700;
+            color: #dc2626;
+            min-width: 60px;
+            text-align: right;
+        }
+
+        .helper-text {
+            font-size: 0.85rem;
+            color: #64748b;
+            font-style: italic;
+        }
+
+        .comparison-section {
+            padding: 50px;
+            background: white;
+        }
+
+        .comparison-header {
+            text-align: center;
+            margin-bottom: 50px;
+        }
+
+        .comparison-header h2 {
+            font-size: 2.2rem;
+            color: #1e293b;
+            margin-bottom: 12px;
+            font-weight: 800;
+            letter-spacing: -0.02em;
+        }
+
+        .comparison-subtitle {
+            font-size: 1.1rem;
+            color: #64748b;
+            font-weight: 500;
+            letter-spacing: -0.01em;
+        }
+
+        .savings-summary {
+            background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+            border: 2px solid #f59e0b;
+            border-radius: 12px;
+            padding: 25px 40px;
+            text-align: center;
+            margin-bottom: 50px;
+        }
+
+        .savings-text {
+            font-size: 1.1rem;
+            color: #92400e;
+            margin-bottom: 8px;
+            font-weight: 600;
+        }
+
+        .savings-amount {
+            font-size: 2.8rem;
+            font-weight: 900;
+            color: #b45309;
+            margin-bottom: 5px;
+            letter-spacing: -0.02em;
+        }
+
+        .savings-detail {
+            font-size: 1rem;
+            color: #92400e;
+            font-weight: 500;
+        }
+
+        .pie-charts-container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 40px;
+        }
+
+        .pie-chart-wrapper {
+            background: #fafafa;
+            padding: 35px;
+            border-radius: 12px;
+            border: 2px solid #e5e7eb;
+            text-align: center;
+            transition: all 0.3s ease;
+        }
+
+        .pie-chart-wrapper.without-agent {
+            border-color: #10b981;
+            background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%);
+        }
+
+        .pie-chart-wrapper.with-agent {
+            border-color: #ef4444;
+            background: linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%);
+        }
+
+        .pie-chart-header {
+            margin-bottom: 25px;
+        }
+
+        .pie-chart-header h3 {
+            font-size: 1.7rem;
+            margin-bottom: 8px;
+            font-weight: 800;
+            letter-spacing: -0.02em;
+        }
+
+        .pie-chart-header.without-agent h3 {
+            color: #059669;
+        }
+
+        .pie-chart-header.with-agent h3 {
+            color: #dc2626;
+        }
+
+        .pie-chart-subtitle {
+            font-size: 1rem;
+            color: #6b7280;
+            font-weight: 500;
+        }
+
+        .pie-chart-svg {
+            width: 280px;
+            height: 280px;
+            margin: 0 auto;
+        }
+
+        .pie-slice {
+            transition: all 0.2s ease;
+            cursor: pointer;
+            stroke: white;
+            stroke-width: 2;
+        }
+
+        .pie-slice:hover {
+            opacity: 0.85;
+        }
+
+        .net-proceeds-display {
+            margin-top: 25px;
+            padding: 20px;
+            border-radius: 10px;
+            font-size: 1rem;
+        }
+
+        .without-agent .net-proceeds-display {
+            background: white;
+            border: 2px solid #10b981;
+        }
+
+        .with-agent .net-proceeds-display {
+            background: white;
+            border: 2px solid #ef4444;
+        }
+
+        .net-proceeds-label {
+            font-weight: 600;
+            margin-bottom: 8px;
+            color: #374151;
+        }
+
+        .net-proceeds-value {
+            font-size: 2.4rem;
+            font-weight: 900;
+            letter-spacing: -0.02em;
+        }
+
+        .without-agent .net-proceeds-value {
+            color: #059669;
+        }
+
+        .with-agent .net-proceeds-value {
+            color: #dc2626;
+        }
+
+        .difference-badge {
+            display: inline-block;
+            margin-top: 10px;
+            padding: 8px 16px;
+            background: #059669;
+            color: white;
+            border-radius: 6px;
+            font-size: 0.95rem;
+            font-weight: 700;
+        }
+
+        .legend {
+            margin-top: 25px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            text-align: left;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-size: 0.9rem;
+            color: #374151;
+            background: white;
+            padding: 10px 12px;
+            border-radius: 6px;
+        }
+
+        .legend-color {
+            width: 20px;
+            height: 20px;
+            border-radius: 4px;
+            flex-shrink: 0;
+        }
+
+        .legend-label {
+            flex: 1;
+            font-weight: 500;
+        }
+
+        .legend-value {
+            font-weight: 700;
+            color: #1e293b;
+        }
+
+        @media (max-width: 1200px) {
+            .calculator-content {
+                grid-template-columns: 1fr;
+            }
+
+            .input-section {
+                border-right: none;
+                border-bottom: 1px solid #e2e8f0;
+            }
+
+            .pie-charts-container {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .calculator-header h1 {
+                font-size: 2rem;
+            }
+
+            .comparison-section {
+                padding: 30px 20px;
+            }
+
+            .savings-amount {
+                font-size: 2rem;
+            }
+
+            .pie-chart-svg {
+                width: 240px;
+                height: 240px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="calculator-container">
+        <div class="calculator-header">
+            <h1>Home Sale Proceeds Calculator</h1>
+            <p class="subtitle">Compare your net proceeds with and without a real estate agent</p>
+        </div>
+
+        <div class="calculator-content">
+            <!-- Input Section -->
+            <div class="input-section">
+                <h2>Property Information</h2>
+
+                <div class="input-group">
+                    <label for="salePrice">Home Sale Price</label>
+                    <div class="input-wrapper">
+                        <span class="currency-symbol">$</span>
+                        <input type="text" id="salePrice" placeholder="500,000" value="500000">
+                    </div>
+                </div>
+
+                <div class="input-group">
+                    <label for="commissionRate">Agent Commission Rate</label>
+                    <div class="slider-wrapper">
+                        <input type="range" id="commissionRate" min="1" max="10" step="0.1" value="6">
+                        <span class="slider-value"><span id="commissionDisplay">6.0</span>%</span>
+                    </div>
+                    <p class="helper-text">Industry standard: 5-6%</p>
+                </div>
+
+                <div class="input-group">
+                    <label for="mortgageBalance">Remaining Mortgage Balance</label>
+                    <div class="input-wrapper">
+                        <span class="currency-symbol">$</span>
+                        <input type="text" id="mortgageBalance" placeholder="300,000" value="300000">
+                    </div>
+                </div>
+
+                <div class="input-group">
+                    <label for="closingCosts">Closing Costs</label>
+                    <div class="input-wrapper">
+                        <span class="currency-symbol">$</span>
+                        <input type="text" id="closingCosts" placeholder="5,000" value="5000">
+                    </div>
+                    <p class="helper-text">Typical range: $3,000 - $8,000</p>
+                </div>
+
+                <div class="input-group">
+                    <label for="otherFees">Other Fees (Optional)</label>
+                    <div class="input-wrapper">
+                        <span class="currency-symbol">$</span>
+                        <input type="text" id="otherFees" placeholder="0" value="0">
+                    </div>
+                    <p class="helper-text">Repairs, staging, warranties, etc.</p>
+                </div>
+            </div>
+
+            <!-- Comparison Section -->
+            <div class="comparison-section">
+                <div class="comparison-header">
+                    <h2>Your Net Proceeds Comparison</h2>
+                    <p class="comparison-subtitle">See the real cost of using a real estate agent</p>
+                </div>
+
+                <!-- Savings Summary -->
+                <div class="savings-summary">
+                    <div class="savings-text">By selling without an agent, you save:</div>
+                    <div class="savings-amount" id="savingsAmount">$30,000</div>
+                    <div class="savings-detail" id="savingsDetail">That's 18.2% more money in your pocket</div>
+                </div>
+
+                <!-- Pie Charts -->
+                <div class="pie-charts-container">
+                    <!-- Without Agent Chart -->
+                    <div class="pie-chart-wrapper without-agent">
+                        <div class="pie-chart-header without-agent">
+                            <h3>Without Agent</h3>
+                            <p class="pie-chart-subtitle">Maximum proceeds</p>
+                        </div>
+                        <svg class="pie-chart-svg" id="pieChartWithout" viewBox="0 0 200 200"></svg>
+                        <div class="net-proceeds-display">
+                            <div class="net-proceeds-label">Your Net Proceeds:</div>
+                            <div class="net-proceeds-value" id="netProceedsWithout">$195,000</div>
+                        </div>
+                        <div class="legend" id="legendWithout"></div>
+                    </div>
+
+                    <!-- With Agent Chart -->
+                    <div class="pie-chart-wrapper with-agent">
+                        <div class="pie-chart-header with-agent">
+                            <h3>With Agent</h3>
+                            <p class="pie-chart-subtitle">After agent commission</p>
+                        </div>
+                        <svg class="pie-chart-svg" id="pieChartWith" viewBox="0 0 200 200"></svg>
+                        <div class="net-proceeds-display">
+                            <div class="net-proceeds-label">Your Net Proceeds:</div>
+                            <div class="net-proceeds-value" id="netProceedsWith">$165,000</div>
+                            <div class="difference-badge" id="differenceBadge">$30,000 less</div>
+                        </div>
+                        <div class="legend" id="legendWith"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Format currency
+        function formatCurrency(value) {
+            return new Intl.NumberFormat('en-US', {
+                style: 'currency',
+                currency: 'USD',
+                minimumFractionDigits: 0,
+                maximumFractionDigits: 0
+            }).format(value);
+        }
+
+        // Format number with commas
+        function formatNumber(value) {
+            return new Intl.NumberFormat('en-US').format(value);
+        }
+
+        // Parse currency input
+        function parseCurrency(value) {
+            if (typeof value === 'number') return value;
+            const cleaned = String(value).replace(/[$,]/g, '').trim();
+            const parsed = parseFloat(cleaned);
+            return isNaN(parsed) ? 0 : parsed;
+        }
+
+        // Create pie chart
+        function createPieChart(svgId, data) {
+            const svg = document.getElementById(svgId);
+            svg.innerHTML = '';
+
+            const centerX = 100;
+            const centerY = 100;
+            const radius = 85;
+
+            let currentAngle = -90; // Start at top
+
+            data.forEach((segment, index) => {
+                if (segment.percentage <= 0) return;
+
+                const startAngle = currentAngle;
+                const angle = (segment.percentage / 100) * 360;
+                const endAngle = startAngle + angle;
+
+                // Convert to radians
+                const startRad = (startAngle * Math.PI) / 180;
+                const endRad = (endAngle * Math.PI) / 180;
+
+                // Calculate path
+                const x1 = centerX + radius * Math.cos(startRad);
+                const y1 = centerY + radius * Math.sin(startRad);
+                const x2 = centerX + radius * Math.cos(endRad);
+                const y2 = centerY + radius * Math.sin(endRad);
+
+                const largeArc = angle > 180 ? 1 : 0;
+
+                const path = `M ${centerX} ${centerY} L ${x1} ${y1} A ${radius} ${radius} 0 ${largeArc} 1 ${x2} ${y2} Z`;
+
+                const pathElement = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+                pathElement.setAttribute('d', path);
+                pathElement.setAttribute('fill', segment.color);
+                pathElement.setAttribute('class', 'pie-slice');
+
+                // Add title for tooltip
+                const title = document.createElementNS('http://www.w3.org/2000/svg', 'title');
+                title.textContent = `${segment.label}: ${segment.value} (${segment.percentage.toFixed(1)}%)`;
+                pathElement.appendChild(title);
+
+                svg.appendChild(pathElement);
+
+                currentAngle = endAngle;
+            });
+        }
+
+        // Create legend
+        function createLegend(legendId, data) {
+            const legend = document.getElementById(legendId);
+            legend.innerHTML = '';
+
+            data.forEach(segment => {
+                if (segment.percentage <= 0) return;
+
+                const item = document.createElement('div');
+                item.className = 'legend-item';
+
+                item.innerHTML = `
+                    <div class="legend-color" style="background: ${segment.color};"></div>
+                    <span class="legend-label">${segment.label}</span>
+                    <span class="legend-value">${segment.value}</span>
+                `;
+
+                legend.appendChild(item);
+            });
+        }
+
+        // Calculate and update
+        function calculate() {
+            const salePrice = parseCurrency(document.getElementById('salePrice').value);
+            const commissionRate = parseFloat(document.getElementById('commissionRate').value);
+            const mortgageBalance = parseCurrency(document.getElementById('mortgageBalance').value);
+            const closingCosts = parseCurrency(document.getElementById('closingCosts').value);
+            const otherFees = parseCurrency(document.getElementById('otherFees').value);
+
+            if (salePrice <= 0) return;
+
+            // With Agent
+            const agentCommission = salePrice * (commissionRate / 100);
+            const totalDeductionsWith = agentCommission + mortgageBalance + closingCosts + otherFees;
+            const netProceedsWith = Math.max(0, salePrice - totalDeductionsWith);
+
+            // Without Agent
+            const totalDeductionsWithout = mortgageBalance + closingCosts + otherFees;
+            const netProceedsWithout = Math.max(0, salePrice - totalDeductionsWithout);
+
+            // Savings
+            const savings = netProceedsWithout - netProceedsWith;
+            const savingsPercent = netProceedsWith > 0 ? ((savings / netProceedsWith) * 100).toFixed(1) : 0;
+
+            // Update displays
+            document.getElementById('savingsAmount').textContent = formatCurrency(savings);
+            document.getElementById('savingsDetail').textContent =
+                `That's ${savingsPercent}% more money in your pocket`;
+            document.getElementById('netProceedsWithout').textContent = formatCurrency(netProceedsWithout);
+            document.getElementById('netProceedsWith').textContent = formatCurrency(netProceedsWith);
+            document.getElementById('differenceBadge').textContent = formatCurrency(savings) + ' less';
+
+            // Without Agent Pie Chart
+            const dataWithout = [
+                {
+                    label: 'Mortgage Payoff',
+                    value: formatCurrency(mortgageBalance),
+                    percentage: (mortgageBalance / salePrice) * 100,
+                    color: '#f59e0b'
+                },
+                {
+                    label: 'Closing Costs & Fees',
+                    value: formatCurrency(closingCosts + otherFees),
+                    percentage: ((closingCosts + otherFees) / salePrice) * 100,
+                    color: '#6b7280'
+                },
+                {
+                    label: 'Your Net Proceeds',
+                    value: formatCurrency(netProceedsWithout),
+                    percentage: (netProceedsWithout / salePrice) * 100,
+                    color: '#10b981'
+                }
+            ];
+
+            // With Agent Pie Chart
+            const dataWith = [
+                {
+                    label: 'Agent Commission',
+                    value: formatCurrency(agentCommission),
+                    percentage: (agentCommission / salePrice) * 100,
+                    color: '#dc2626'
+                },
+                {
+                    label: 'Mortgage Payoff',
+                    value: formatCurrency(mortgageBalance),
+                    percentage: (mortgageBalance / salePrice) * 100,
+                    color: '#f59e0b'
+                },
+                {
+                    label: 'Closing Costs & Fees',
+                    value: formatCurrency(closingCosts + otherFees),
+                    percentage: ((closingCosts + otherFees) / salePrice) * 100,
+                    color: '#6b7280'
+                },
+                {
+                    label: 'Your Net Proceeds',
+                    value: formatCurrency(netProceedsWith),
+                    percentage: (netProceedsWith / salePrice) * 100,
+                    color: '#10b981'
+                }
+            ];
+
+            createPieChart('pieChartWithout', dataWithout);
+            createPieChart('pieChartWith', dataWith);
+            createLegend('legendWithout', dataWithout);
+            createLegend('legendWith', dataWith);
+        }
+
+        // Format input on blur
+        function formatInputOnBlur(inputElement) {
+            const value = parseCurrency(inputElement.value);
+            if (value > 0) {
+                inputElement.value = formatNumber(value);
+            }
+        }
+
+        // Remove format on focus
+        function removeFormatOnFocus(inputElement) {
+            const value = parseCurrency(inputElement.value);
+            if (value > 0) {
+                inputElement.value = value;
+            }
+        }
+
+        // Update commission display
+        function updateCommissionDisplay() {
+            const rate = document.getElementById('commissionRate').value;
+            document.getElementById('commissionDisplay').textContent = parseFloat(rate).toFixed(1);
+            calculate();
+        }
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', function() {
+            const inputs = ['salePrice', 'mortgageBalance', 'closingCosts', 'otherFees'];
+            const commissionRate = document.getElementById('commissionRate');
+
+            inputs.forEach(id => {
+                const input = document.getElementById(id);
+                input.addEventListener('input', calculate);
+                input.addEventListener('focus', function() { removeFormatOnFocus(this); });
+                input.addEventListener('blur', function() {
+                    formatInputOnBlur(this);
+                    calculate();
+                });
+                input.addEventListener('keypress', function(e) {
+                    if (e.key === 'Enter') this.blur();
+                });
+                formatInputOnBlur(input);
+            });
+
+            commissionRate.addEventListener('input', updateCommissionDisplay);
+            calculate();
+        });
+    </script>
+</body>
+</html>
