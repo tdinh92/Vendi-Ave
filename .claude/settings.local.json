@@ -3,7 +3,10 @@
     "allow": [
       "Bash(python test_assessmenthistory.py:*)",
       "Bash(python:*)",
-      "Bash(set:*)"
+      "Bash(set:*)",
+      "WebFetch(domain:api.developer.attomdata.com)",
+      "WebFetch(domain:developer.attomdata.com)",
+      "WebFetch(domain:www.attomdata.com)"
     ],
     "deny": [],
     "ask": []
