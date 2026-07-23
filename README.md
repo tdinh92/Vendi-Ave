@@ -1,10 +1,13 @@
 # avm_api - Property Valuation Service
 
-A REST API service that provides property valuations and detailed property information using Attom Data's real estate APIs.
+A REST API service that provides property valuations and detailed property information using RentCast and RealtyAPI.io's real estate APIs.
 
 ## 🏠 Overview
 
-This service combines Attom Data's AVM (Automated Valuation Model) and Basic Property Profile APIs to provide comprehensive property reports. It offers both machine-readable raw data and homeowner-friendly formatted responses.
+This service combines RentCast's property records with RealtyAPI.io's aggregated valuation, listing, and tax history data to provide comprehensive property reports. It offers both machine-readable raw data and homeowner-friendly formatted responses.
+
+- **RentCast** supplies the subject property's basic profile (beds/baths/sqft/lot/year built, owner, coordinates) via a single `/properties` call.
+- **RealtyAPI.io** supplies valuation estimates, tax assessment history, listing/event history, sales comparables, and similar-property search, aggregated from the underlying listing platforms (Redfin, Realtor.com, Zillow, etc.).
 
 ## ✨ Features
 
@@ -24,16 +27,19 @@ This service combines Attom Data's AVM (Automated Valuation Model) and Basic Pro
 ### Prerequisites
 
 - Python 3.7+
-- Attom Data API key
+- A [RentCast](https://developers.rentcast.io/) API key
+- A [RealtyAPI.io](https://www.realtyapi.io/) API key
 - Required packages: `requests`, `flask`, `flask-cors`, `python-dotenv`
 
 ### Installation
 
 1. **Set up environment variables**:
-   Create a `.env` file in the `AVM_Api/` directory:
+   Create a `.env` file at `~/.vendi-ave/.env` (kept outside the repo so it's never
+   at risk of being committed/pushed):
    ```bash
-   cd AVM_Api
-   echo "ATTOM_API_KEY=your_api_key_here" > .env
+   mkdir -p ~/.vendi-ave
+   echo "RENTCAST_API_KEY=your_rentcast_key_here" > ~/.vendi-ave/.env
+   echo "REALTYAPI_KEY=your_realtyapi_key_here" >> ~/.vendi-ave/.env
    ```
 
 2. **Install dependencies**:
@@ -43,17 +49,16 @@ This service combines Attom Data's AVM (Automated Valuation Model) and Basic Pro
 
 3. **Start the API server**:
    ```bash
-   cd AVM_Api
    python property_rest_api.py
    ```
 
-The API will be available at: `http://localhost:5000`
+The API will be available at: `http://localhost:5001`
 
 ## 📡 API Endpoints
 
 ### Health Check
 ```bash
-curl http://localhost:5000/health
+curl http://localhost:5001/health
 ```
 
 ### Property Reports
@@ -61,21 +66,21 @@ curl http://localhost:5000/health
 #### Combined Report (Recommended)
 Gets AVM data if available, falls back to basic profile:
 ```bash
-curl -X POST http://localhost:5000/property/combined \
+curl -X POST http://localhost:5001/property/combined \
   -H "Content-Type: application/json" \
   -d '{"address": "123 Main St, Boston, MA 02101"}'
 ```
 
 #### AVM Report Only
 ```bash
-curl -X POST http://localhost:5000/property/avm \
+curl -X POST http://localhost:5001/property/avm \
   -H "Content-Type: application/json" \
   -d '{"address": "123 Main St, Boston, MA 02101"}'
 ```
 
 #### Basic Profile Only
 ```bash
-curl -X POST http://localhost:5000/property/basic \
+curl -X POST http://localhost:5001/property/basic \
   -H "Content-Type: application/json" \
   -d '{"address": "123 Main St, Boston, MA 02101"}'
 ```
@@ -83,7 +88,7 @@ curl -X POST http://localhost:5000/property/basic \
 #### Batch Processing
 Process up to 10 addresses at once:
 ```bash
-curl -X POST http://localhost:5000/property/batch \
+curl -X POST http://localhost:5001/property/batch \
   -H "Content-Type: application/json" \
   -d '{
     "addresses": [
@@ -101,10 +106,10 @@ curl -X POST http://localhost:5000/property/batch \
 {
   "address": "123 MAIN ST, BOSTON, MA 02101",
   "current_estimated_value": "$1,445,419",
-  "value_range_low": "$1,373,148", 
+  "value_range_low": "$1,373,148",
   "value_range_high": "$1,517,689",
-  "confidence_score": "95/100",
-  "estimate_date": "2024-08-25",
+  "confidence_score": "2 valuation source(s)",
+  "value_source": "Quantarium",
   "property_size": "3,054 sqft",
   "year_built": "1994",
   "bedrooms": "3",
@@ -113,7 +118,8 @@ curl -X POST http://localhost:5000/property/batch \
   "last_sale_price": "$370,000",
   "last_sale_date": "2000-05-15",
   "current_assessment": "$1,200,000",
-  "owner": "John Smith",
+  "list_price": "$1,399,000",
+  "listing_status": "off_market",
   "data_retrieved": "2024-08-25 15:30:00"
 }
 ```
@@ -141,14 +147,14 @@ curl -X POST http://localhost:5000/property/batch \
 ## 🗂️ File Structure
 
 ```
-AVM_Api/
 ├── property_api_service.py    # Core service logic
-├── property_rest_api.py       # Flask REST API wrapper  
+├── property_rest_api.py       # Flask REST API wrapper
 ├── requirements.txt          # Python dependencies
-├── .env                      # Environment variables (API key)
 ├── API_USAGE_GUIDE.md        # Detailed usage examples
 └── README.md                 # This file
 ```
+
+API keys live in `~/.vendi-ave/.env`, outside this repo entirely (see Installation above).
 
 ## 🛠️ Development
 
@@ -190,7 +196,7 @@ This starts an interactive command-line interface for testing the service direct
 
 ## 📊 Interactive Charts
 
-Access professional D3.js visualizations at `http://localhost:5000/charts`
+Access professional D3.js visualizations at `http://localhost:5001/charts`
 
 Features:
 - 14+ years of assessment history trends
@@ -200,7 +206,8 @@ Features:
 
 ## 🔗 Dependencies
 
-- **Attom Data API**: Real estate data provider
+- **RentCast API**: Property records data provider
+- **RealtyAPI.io**: Valuation, tax history, and listing data provider
 - **Flask**: Web framework for REST API
 - **Flask-CORS**: Cross-origin resource sharing
 - **requests**: HTTP client library
@@ -208,4 +215,4 @@ Features:
 
 ## 📄 License
 
-This project integrates with Attom Data's commercial APIs. Ensure you have appropriate licensing and API access before use.
+This project integrates with RentCast's and RealtyAPI.io's commercial APIs. Ensure you have appropriate licensing and API access before use.

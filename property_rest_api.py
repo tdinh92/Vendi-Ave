@@ -475,7 +475,10 @@ def get_sales_comparables_post():
         "city": "Wilmington",
         "county": "Middlesex",
         "state": "MA",
-        "zip_code": "01887"
+        "zip_code": "01887",
+        "sqft_tolerance": 20.0,      // Optional, default 20.0 (±20%)
+        "bed_bath_tolerance": 1.0,   // Optional, default 1.0 (+/- rooms)
+        "value_tolerance": 20.0      // Optional, default 20.0 (±20%)
     }
     """
     try:
@@ -508,7 +511,10 @@ def get_sales_comparables_post():
             data['city'].strip(),
             data.get('county', '').strip(),  # Optional
             data['state'].strip(),
-            data['zip_code'].strip()
+            data['zip_code'].strip(),
+            sqft_tolerance=float(data.get('sqft_tolerance', 20.0)),
+            bed_bath_tolerance=float(data.get('bed_bath_tolerance', 1.0)),
+            value_tolerance=float(data.get('value_tolerance', 20.0))
         )
         return jsonify(result)
 

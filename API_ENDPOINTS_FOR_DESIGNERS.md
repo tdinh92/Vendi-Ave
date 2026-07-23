@@ -2,13 +2,14 @@
 
 ## 🚀 Base URL
 ```
-http://localhost:5000
+http://localhost:5001
 ```
 
 ## 📊 Endpoints for Value Range Visualization
 
 ### 1. Get AVM Data (Raw) - **RECOMMENDED FOR VALUE RANGE**
-Get AVM market estimate with confidence score and value range.
+Get valuation estimate(s) sourced from RealtyAPI.io (which aggregates AVM data from
+providers like Quantarium and Collateral Analytics via the underlying listing platforms).
 
 **Endpoint:** `POST /property/raw/avm`
 
@@ -22,29 +23,36 @@ Get AVM market estimate with confidence score and value range.
 **Response (contains value range data):**
 ```json
 {
-  "property": [
-    {
-      "avm": {
-        "amount": {
-          "value": {
-            "value": 1327564,          // AVM Market Value
-            "valueLow": 1261185,       // Low Estimate
-            "valueHigh": 1393942,      // High Estimate
-            "confidence": 95,          // Confidence Score (0-100)
-            "fsd": 5.0                 // Forecast Standard Deviation
-          }
-        },
-        "eventDate": "2025-09-22"      // Valuation Date
-      }
+  "success": true,
+  "data": {
+    "address": { "line": "4 Fiorenza Dr", "city": "Wilmington", "state_code": "MA", "postal_code": "01887" },
+    "list_price": 399000,
+    "last_sold_price": 370000,
+    "last_sold_date": "2000-04-28",
+    "status": "off_market",
+    "details": { "beds": 3, "baths": "2.5", "sqft": 2766, "year_built": 1994 },
+    "estimates": {
+      "current_values": [
+        { "source": { "type": "quantarium", "name": "Quantarium" }, "estimate": 1223596, "isbest_homevalue": true },
+        { "source": { "type": "collateral", "name": "Collateral Analytics" }, "estimate": 1181000, "isbest_homevalue": false }
+      ]
     }
+  },
+  "estimates": [
+    { "source": { "type": "quantarium", "name": "Quantarium" }, "estimate": 1223596, "isbest_homevalue": true },
+    { "source": { "type": "collateral", "name": "Collateral Analytics" }, "estimate": 1181000, "isbest_homevalue": false }
   ]
 }
 ```
 
+There's no single confidence score or fixed high/low range field — instead you get a
+list of estimates from different sources. Use `Math.min`/`Math.max` across `estimates`
+to build a value range, and pick the one with `isbest_homevalue: true` as the headline number.
+
 **JavaScript Example:**
 ```javascript
 async function getValueRangeData(address) {
-  const response = await fetch('http://localhost:5000/property/raw/avm', {
+  const response = await fetch('http://localhost:5001/property/raw/avm', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -52,15 +60,16 @@ async function getValueRangeData(address) {
     body: JSON.stringify({ address: address })
   });
 
-  const data = await response.json();
-  const avm = data.property[0].avm.amount.value;
+  const result = await response.json();
+  const estimates = result.estimates || [];
+  const values = estimates.map(e => e.estimate).filter(Boolean);
+  const best = estimates.find(e => e.isbest_homevalue) || estimates[0];
 
   return {
-    avmValue: avm.value,
-    lowValue: avm.valueLow,
-    highValue: avm.valueHigh,
-    confidence: avm.confidence,
-    fsd: avm.fsd
+    avmValue: best?.estimate,
+    lowValue: Math.min(...values),
+    highValue: Math.max(...values),
+    sourceCount: estimates.length
   };
 }
 
@@ -69,7 +78,7 @@ getValueRangeData('4 Fiorenza Drive, Wilmington, MA 01887')
   .then(data => {
     console.log('AVM Value:', data.avmValue);
     console.log('Range:', data.lowValue, '-', data.highValue);
-    console.log('Confidence:', data.confidence);
+    console.log('Sources:', data.sourceCount);
   });
 ```
 
@@ -177,48 +186,63 @@ Body: {
 ```
 Returns recently sold comparable properties with smart filtering.
 
-#### 9. Similar Properties (AVM + Assessment Data)
+#### 9. Similar Properties (Estimated Value + Listing Data)
 ```
 POST /property/similar
-Body: {"address": "4 Fiorenza Drive, Wilmington, MA 01887"}
+Body: {
+  "street": "4 Fiorenza Drive",
+  "city": "Wilmington",
+  "county": "",
+  "state": "MA",
+  "zip_code": "01887",
+  "sqft_tolerance": 10.0,
+  "radius_miles": 5.0
+}
 ```
-Returns 15 similar properties with BOTH AVM market estimates AND tax assessed values.
+Note: this endpoint takes address **components**, not a single `address` string (unlike
+most other endpoints). Returns up to 15 nearby properties matching bedrooms/bathrooms
+exactly and square footage within `±sqft_tolerance`, sourced from RealtyAPI.io.
 
 **Response Example:**
 ```json
 {
   "subject_property": {
-    "address": "4 FIORENZA DR, WILMINGTON, MA 01887",
+    "address": "4 Fiorenza Drive, Wilmington, MA 01887",
     "bedrooms": 3,
-    "bathrooms": 3.0,
-    "sqft": 3053
+    "bathrooms": 2.5,
+    "sqft": 3054
   },
   "filters_applied": {
     "bedrooms": 3,
-    "bathrooms": 3.0,
-    "sqft_min": 2748,
-    "sqft_max": 3358
+    "bathrooms": 2.5,
+    "sqft_range": "2,748 - 3,359",
+    "sqft_tolerance": "±10.0%",
+    "radius_miles": 5.0
   },
-  "total_properties": 15,
-  "similar_properties": [
+  "total_comparables": 1,
+  "comparables": [
     {
-      "address": "123 Main St, Wilmington, MA 01887",
-      "distance_miles": 0.8,
-      "avm_value": "$1,250,000",
-      "avm_value_per_sqft": "$425.50",
-      "assessed_value": "$1,100,000",
-      "assessed_value_per_sqft": "$374.15",
-      "confidence_score": 92,
-      "value_range_high": "$1,312,500",
-      "value_range_low": "$1,187,500",
+      "address": "32 River Rd, Andover, MA 01810",
+      "distance_miles": 6.4,
       "bedrooms": 3,
-      "bathrooms": 3.0,
-      "sqft": 2938,
-      "year_built": 2005
+      "bathrooms": "2.5",
+      "building_size_sqft": 2395,
+      "listing_status": "for_sale",
+      "estimated_value": "$727,900",
+      "raw_estimated_value": 727900,
+      "estimated_value_per_sqft": "$303.92",
+      "list_price": "$539,900",
+      "last_sale_price": "N/A",
+      "last_sale_date": null,
+      "property_id": "4166998128"
     }
   ]
 }
 ```
+
+Note there's no `assessed_value` or `confidence_score` per property anymore, and the
+array key is `comparables` (not `similar_properties`) with `total_comparables`
+(not `total_properties`) — update any UI code that reads the old field names.
 
 #### 10. Batch Processing (Up to 10 Addresses)
 ```
@@ -233,14 +257,14 @@ Body: {
 
 ---
 
-### Raw Data Endpoints (Unformatted Attom API Responses)
+### Raw Data Endpoints (Unformatted RentCast / RealtyAPI.io Responses)
 
 #### Raw AVM Data
 ```
 POST /property/raw/avm
 Body: {"address": "123 Main St, Boston, MA 02101"}
 ```
-Returns raw Attom AVM API response (use this for value range slider).
+Returns raw RealtyAPI.io listing/valuation response (use this for value range slider).
 
 #### Raw Basic Profile Data
 ```
@@ -296,33 +320,36 @@ Examples:
 // Fetch AVM data and update the visualization
 async function updateValueRangeSlider(address) {
   try {
-    const response = await fetch('http://localhost:5000/property/raw/avm', {
+    const response = await fetch('http://localhost:5001/property/raw/avm', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ address: address })
     });
 
-    const data = await response.json();
-    const avm = data.property[0].avm.amount.value;
+    const result = await response.json();
+    const estimates = result.estimates || [];
+    const values = estimates.map(e => e.estimate).filter(Boolean);
+    const best = estimates.find(e => e.isbest_homevalue) || estimates[0];
+    const low = Math.min(...values);
+    const high = Math.max(...values);
 
     // Update your UI elements
     document.getElementById('mostLikelyValue').textContent =
-      `$${avm.value.toLocaleString()}`;
+      `$${best.estimate.toLocaleString()}`;
     document.getElementById('lowValue').textContent =
-      `$${avm.valueLow.toLocaleString()}`;
+      `$${low.toLocaleString()}`;
     document.getElementById('highValue').textContent =
-      `$${avm.valueHigh.toLocaleString()}`;
+      `$${high.toLocaleString()}`;
 
     // Calculate marker position (0-100%)
-    const range = avm.valueHigh - avm.valueLow;
-    const position = ((avm.value - avm.valueLow) / range) * 100;
+    const range = high - low;
+    const position = ((best.estimate - low) / range) * 100;
     document.getElementById('rangeMarker').style.left = position + '%';
 
-    // Update metrics
-    document.getElementById('fsdValue').textContent = avm.fsd.toFixed(1) + '%';
-    const valueRange = avm.valueHigh - avm.valueLow;
+    // Update metrics (no FSD from this provider - show source count instead)
+    document.getElementById('sourceCount').textContent = `${estimates.length} sources`;
     document.getElementById('valueRange').textContent =
-      `$${valueRange.toLocaleString()}`;
+      `$${range.toLocaleString()}`;
 
   } catch (error) {
     console.error('Error fetching AVM data:', error);
@@ -336,19 +363,19 @@ updateValueRangeSlider('4 Fiorenza Drive, Wilmington, MA 01887');
 ### Example 2: Fetch Similar Properties for Comparison
 
 ```javascript
-async function getSimilarProperties(address) {
-  const response = await fetch('http://localhost:5000/property/similar', {
+async function getSimilarProperties(street, city, state, zip_code) {
+  const response = await fetch('http://localhost:5001/property/similar', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ address: address })
+    body: JSON.stringify({ street, city, county: '', state, zip_code })
   });
 
   const data = await response.json();
 
   // Display similar properties in your UI
-  data.similar_properties.forEach(property => {
-    console.log(`${property.address}: ${property.avm_value}`);
-    console.log(`  Confidence: ${property.confidence_score}`);
+  (data.comparables || []).forEach(property => {
+    console.log(`${property.address}: ${property.estimated_value}`);
+    console.log(`  Status: ${property.listing_status}`);
     console.log(`  Distance: ${property.distance_miles} miles`);
   });
 
@@ -360,7 +387,7 @@ async function getSimilarProperties(address) {
 
 ```javascript
 async function loadAssessmentCharts(address) {
-  const response = await fetch('http://localhost:5000/property/assessmenthistory', {
+  const response = await fetch('http://localhost:5001/property/assessmenthistory', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ address: address })
@@ -400,7 +427,7 @@ cd c:\Users\thoma\OneDrive\Documents\GitHub\Vendi-Ave
 python property_rest_api.py
 
 # Server runs on:
-# http://localhost:5000
+# http://localhost:5001
 ```
 
 ---
@@ -431,12 +458,12 @@ All endpoints return JSON responses with consistent error handling:
 
 ### For Value Range Slider:
 ✅ **`POST /property/raw/avm`**
-- Returns: AVM value, low, high, confidence, FSD
+- Returns: a list of valuation `estimates` (source name + value) - derive low/high/best yourself
 - Perfect for the gradient slider visualization
 
 ### For Property Comparison:
 ✅ **`POST /property/similar`**
-- Returns: 15 similar properties with AVM + assessed values
+- Returns: up to 15 similar properties with estimated value + listing status
 - Great for comparison tables/lists
 
 ### For Historical Trends:
@@ -457,19 +484,19 @@ All endpoints return JSON responses with consistent error handling:
 
 ```bash
 # Test AVM endpoint
-curl -X POST http://localhost:5000/property/raw/avm \
+curl -X POST http://localhost:5001/property/raw/avm \
   -H "Content-Type: application/json" \
   -d '{"address": "4 Fiorenza Drive, Wilmington, MA 01887"}'
 
 # Test similar properties
-curl -X POST http://localhost:5000/property/similar \
+curl -X POST http://localhost:5001/property/similar \
   -H "Content-Type: application/json" \
   -d '{"address": "4 Fiorenza Drive, Wilmington, MA 01887"}'
 ```
 
 ### Using Postman:
 1. Create new POST request
-2. URL: `http://localhost:5000/property/raw/avm`
+2. URL: `http://localhost:5001/property/raw/avm`
 3. Headers: `Content-Type: application/json`
 4. Body (raw JSON):
    ```json
@@ -481,9 +508,9 @@ curl -X POST http://localhost:5000/property/similar \
 
 ### Using Browser (for GET endpoints):
 ```
-http://localhost:5000/health
-http://localhost:5000/charts
-http://localhost:5000/static/value-range-slider.html
+http://localhost:5001/health
+http://localhost:5001/charts
+http://localhost:5001/static/value-range-slider.html
 ```
 
 ---
@@ -500,7 +527,7 @@ http://localhost:5000/static/value-range-slider.html
 ## 🆘 Troubleshooting
 
 **API not starting?**
-- Check if `.env` file exists with `ATTOM_API_KEY`
+- Check if `~/.vendi-ave/.env` exists with `RENTCAST_API_KEY` and `REALTYAPI_KEY`
 - Verify Python dependencies: `pip install -r requirements.txt`
 
 **CORS errors?**
@@ -509,11 +536,11 @@ http://localhost:5000/static/value-range-slider.html
 
 **No data returned?**
 - Verify address format is correct
-- Check API key is valid
-- Ensure property exists in Attom database
+- Check both API keys are valid
+- Property may not exist in RentCast/RealtyAPI.io's coverage
 
 **Server running on different port?**
-- Default is 5000
+- Default is 5001
 - Check console output when starting server
 - Update base URL accordingly
 
@@ -522,6 +549,6 @@ http://localhost:5000/static/value-range-slider.html
 **✅ All endpoints are live and ready for your designer to use!**
 
 **Server Status:** Run `python property_rest_api.py` to start
-**Base URL:** `http://localhost:5000`
+**Base URL:** `http://localhost:5001`
 **CORS:** Enabled for all origins
 **Response Format:** JSON

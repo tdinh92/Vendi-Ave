@@ -74,7 +74,7 @@ Your Flask server now includes these new endpoints:
 
 ### Data Endpoints (Already Available)
 - **`POST /property/assessmenthistory`** - Processed assessment history data
-- **`POST /property/raw/assessmenthistory`** - Raw assessment data from Attom
+- **`POST /property/raw/assessmenthistory`** - Raw assessment data from RealtyAPI.io
 
 ## 📋 Complete API Endpoint List
 
@@ -297,7 +297,7 @@ const charts = new AssessmentCharts({
 - **CORS**: Server includes CORS headers for cross-origin requests
 - **Input Validation**: Address inputs are validated and sanitized
 - **Rate Limiting**: Consider implementing rate limiting for production use
-- **API Keys**: Attom API keys are server-side only, not exposed to clients
+- **API Keys**: RentCast/RealtyAPI.io API keys are server-side only, not exposed to clients
 
 ## 🚀 Getting Started Checklist
 
@@ -317,7 +317,7 @@ const charts = new AssessmentCharts({
 - Check browser console for JavaScript errors
 
 **Data not displaying?**
-- Ensure the property address exists in the Attom database
+- Ensure the property address exists in RentCast/RealtyAPI.io coverage
 - Check that your API key is valid and active
 - Verify the address format is correct
 

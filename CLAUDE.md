@@ -126,25 +126,30 @@ This document tracks the comprehensive development of an AVM (Automated Valuatio
 ### Static Files
 - `GET /static/<filename>` - Static files (JS library, assets)
 
-## 🗂️ File Structure (Final)
+## 🗂️ File Structure (Current)
 
 ```
-AVM_Api/
-├── property_api_service.py       # Core service logic with security enhancements
-├── property_rest_api.py          # Original Flask REST API wrapper
-├── property_rest_api_secure.py   # Secure REST API with input validation
+Vendi-Ave/
+├── property_api_service.py       # Core service logic (RentCast + RealtyAPI.io)
+├── property_rest_api.py          # Flask REST API wrapper
 ├── README.md                     # Main documentation
+├── API_ENDPOINTS_FOR_DESIGNERS.md # REST API reference for frontend/design
 ├── CHARTS_INTEGRATION_GUIDE.md   # Developer integration guide
 ├── CLAUDE.md                     # This development log
 ├── SECURITY_IMPROVEMENTS.md      # Security enhancements documentation
-├── requirements.txt              # Original Python dependencies
-├── requirements_secure.txt       # Secure dependencies with security libs
-├── .env                          # Environment variables (API key)
+├── requirements.txt              # Python dependencies
+├── .env (at ~/.vendi-ave/.env, not in this tree) # RENTCAST_API_KEY, REALTYAPI_KEY
 ├── static/
 │   └── assessment-charts.js      # JavaScript library (13KB)
 └── templates/
     └── assessment_charts.html    # Interactive chart interface (18KB)
 ```
+
+Note: this structure reflects the actual repo layout (`Vendi-Ave`), not the `avm_api`
+path referenced in some earlier sections of this log below - those sections predate
+this repo and describe a prior project state that included a separate
+`property_rest_api_secure.py`/`requirements_secure.txt`, which were never carried
+into this codebase.
 
 ## 📊 Interactive Charts Integration Guide
 
@@ -911,3 +916,51 @@ The AVM API system with D3.js visualization capabilities and similar properties 
 - ✅ Added comprehensive statistics comparing AVM and assessed values
 - ✅ Real-world test shows AVM averaging 20.1% higher than assessed values
 - ✅ Provides complete investment analysis with market and tax perspectives
+
+### Phase 9: Migrated from Attom Data to RentCast + RealtyAPI.io
+
+Attom Data was fully replaced with two providers. **Endpoint URLs, HTTP methods, and
+request bodies in `property_rest_api.py` are unchanged** - only the underlying data
+source and some response fields changed.
+
+**New provider split:**
+- **RentCast** (`RENTCAST_API_KEY`) - exactly one call per lookup, `GET /properties`,
+  used only for the subject property's basic info (beds/baths/sqft/lot/year built,
+  owner, coordinates, current tax assessment). Kept deliberately minimal per product
+  decision - RentCast is not used for valuation, comps, or history.
+- **RealtyAPI.io** (`REALTYAPI_KEY`) - aggregates data from the underlying listing
+  platforms (Redfin, Realtor.com, Zillow, etc.) via `realtor.realtyapi.io`. Powers:
+  - Valuation (`GET /details/byaddress` → `estimates.current_values`, sourced from
+    providers like Quantarium and Collateral Analytics - no single confidence score,
+    instead a list of source estimates)
+  - Tax assessment history (`tax_history` on the same endpoint - deeper than RentCast's,
+    e.g. 12 years back to 2003 vs RentCast's 2 most recent years)
+  - Listing/event history (`property_history` on the same endpoint)
+  - Sales comparables and similar properties (`GET /search/bycoordinates`, filtered
+    client-side by exact beds/baths and ±sqft tolerance, with an expanding-radius loop
+    since the endpoint doesn't support server-side bed/bath/status filters)
+
+**Endpoints most affected (response field changes, not URL changes):**
+- `/property/avm`, `/property/combined`, `/property/complete`: `confidence_score` is
+  now a source count (e.g. `"2 valuation source(s)"`) instead of a 0-100 score;
+  `estimate_date` and `owner` removed; `value_source`, `list_price`, `listing_status` added.
+- `/property/similar`: field names changed substantially - `avm_value`/`assessed_value`/
+  `attom_id`/`confidence_score`/`fsd` replaced with `estimated_value`/`property_id`/
+  `list_price`/`last_sale_price`/`listing_status`. See `API_ENDPOINTS_FOR_DESIGNERS.md`
+  for the full before/after.
+- `/property/assessmenthistory`: dropped Attom-only fields (`market_value`,
+  `appraised_value`, `mill_rate`, `exemptions`, `taxable_value`) that RealtyAPI.io's
+  `tax_history` doesn't provide; core fields (`total_assessed_value`, `tax_amount`,
+  `assessed_per_sqft`) unchanged.
+
+**Bugs fixed during the migration:**
+- `_sanitize_financial_data` was silently stripping `last_sale_date` and `value_source`
+  on every response, because it pattern-matches key names containing "sale"/"value"
+  and tries to parse them as currency. Fixed to skip keys ending in `_date`/`_source`/`_status`.
+- `get_similar_properties_with_sales` now expands its search radius (like
+  `get_sales_comparables` already did) instead of giving up after one fixed-radius call.
+
+**Files removed** (stale demo scripts built against the old Attom-based `/property/similar`
+field names, now superseded): `list_similar_properties.py`, `run_similar_properties.py`,
+`show_similar_dataframe.py`, `similar_by_assessed_value.py`, `SALE_AND_ASSESSMENT_DATA.md`
+(Attom-era research notes, not documentation anyone builds against).
